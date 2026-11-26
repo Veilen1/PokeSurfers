@@ -149,7 +149,7 @@
 .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 268px; align-items: start; gap: 15px; }
 .runner-column, .runner-aside { min-width: 0; }
 .runner-aside { display: flex; flex-direction: column; gap: 12px; }
-.game-wrap { overflow: hidden; border: 1px solid rgba(105, 206, 211, .35); border-radius: 17px; background: #102A48; box-shadow: 0 22px 60px rgba(0, 0, 0, .28), 0 0 30px rgba(50, 180, 193, .07); }
+.game-wrap { overflow: hidden; border: 1px solid rgba(105, 206, 211, .35); border-radius: 17px; background: #102A48; box-shadow: 0 22px 60px rgba(0, 0, 0, .28), 0 0 30px rgba(50, 180, 193, .07); user-select: none; -webkit-user-select: none; }
 .game-hud { height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 0 15px; border-bottom: 1px solid rgba(151, 221, 230, .17); background: #10203B; }
 .game-hud > div { display: flex; align-items: center; gap: 8px; }
 .hud-label { color: #9EB7D0; font-size: 9px; font-weight: 700; letter-spacing: .13em; }
@@ -236,7 +236,7 @@
 .powerup-hoverboard { background: #7FE4FF; }
 @keyframes multiplier-pop { 0% { transform: scale(.65); filter: brightness(1.7); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #78E4C9; box-shadow: 0 0 10px rgba(120, 228, 201, .7); }
-.canvas-shell { position: relative; overflow: hidden; background: #09172D; touch-action: none; }
+.canvas-shell { position: relative; overflow: hidden; background: #09172D; touch-action: none; overscroll-behavior: contain; }
 .canvas-shell canvas { display: block; width: 100%; aspect-ratio: 2 / 1; }
 .game-overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 15px; background: linear-gradient(180deg, rgba(5, 15, 36, .25), rgba(4, 16, 34, .58)); backdrop-filter: blur(2px); }
 .overlay-card { max-width: 390px; padding: 21px 27px; border: 1px solid rgba(150, 229, 228, .3); border-radius: 17px 26px 17px 17px; background: rgba(11, 25, 50, .94); text-align: center; box-shadow: 0 18px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.08); }
@@ -325,11 +325,15 @@
 .page-action { display: flex; justify-content: flex-end; margin-top: 20px; }
 .market-note { display: flex; align-items: center; gap: 13px; margin: 0 0 17px; padding: 15px 18px; border: 1px solid rgba(255, 203, 123, .25); background: rgba(255, 203, 123, .055); }
 .market-note > svg { flex: 0 0 auto; color: #FFD58C; font-size: 24px; }
+.market-note.fui-Card { display: flex; align-items: center; }
+.notice-card.fui-Card { display: flex; align-items: center; }
+.rankings-footnote.fui-Card { display: flex; align-items: center; gap: 8px; }
 .market-note div { display: flex; flex: 1; flex-direction: column; gap: 4px; }
 .market-note div span { font-size: 11px; }
 .market-note strong { color: #FFD58C; font-size: 13px; white-space: nowrap; }
 .donation-note { display: flex; align-items: center; gap: 13px; margin: -5px 0 17px; padding: 15px 18px; border: 1px solid rgba(83, 216, 207, .21); background: linear-gradient(110deg, rgba(20, 45, 70, .8), rgba(16, 32, 58, .8)); }
 .donation-note > svg { flex: 0 0 auto; color: #76E2D5; font-size: 21px; }
+.donation-note.fui-Card { display: flex; align-items: center; }
 .donation-note > div { display: flex; flex: 1; flex-direction: column; gap: 4px; }
 .donation-note div span { font-size: 11px; line-height: 1.5; }
 .donation-status { color: #AFC2D8; font-size: 11px; white-space: nowrap; }
@@ -370,6 +374,13 @@
 .guest-banner > svg { flex: none; color: #FFD58C; }
 .guest-banner > div { display: flex; flex-direction: column; gap: 1px; }
 .guest-banner .muted-copy { font-size: 12px; }
+.guest-ball { width: 22px; height: 22px; flex: none; image-rendering: pixelated; }
+.nav-icon { width: 18px; height: 18px; display: block; image-rendering: pixelated; }
+.page-icon { width: 52px; height: 52px; flex: none; image-rendering: pixelated; filter: drop-shadow(0 5px 10px rgba(2, 8, 24, .35)); }
+.page-intro-icon { display: flex; align-items: flex-start; gap: 14px; }
+.page-intro-icon > div { min-width: 0; }
+.inline-sprite { width: 18px; height: 18px; display: inline-block; vertical-align: -3px; image-rendering: pixelated; }
+.button-sprite { width: 18px; height: 18px; display: block; image-rendering: pixelated; }
 .muted-copy { color: #AFC2D8 !important; }
 
 .account-layout { width: min(1080px, calc(100% - 40px)); min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, .84fr); gap: 18px; align-items: center; margin: 0 auto; padding: 34px 0; }
@@ -732,7 +743,7 @@ html { scroll-padding-top: calc(96px + env(safe-area-inset-top)); }
   .runner-section .section-heading { display: none; }
 
   .game-wrap { border-radius: 12px; }
-  .canvas-shell canvas { aspect-ratio: 3 / 2; }
+  .canvas-shell canvas { aspect-ratio: 4 / 3; }
   .game-hud { height: 46px; padding: 0 8px; gap: 4px; }
   .game-hud > div { gap: 4px; }
   .hud-distance { display: none; }
@@ -783,6 +794,8 @@ html { scroll-padding-top: calc(96px + env(safe-area-inset-top)); }
   .controls-card p, .controls-card .muted-copy { font-size: 9.5px; }
 
   .page-intro { margin-bottom: 14px; }
+  .page-icon { width: 38px; height: 38px; }
+  .page-intro-icon { gap: 10px; }
   .page-intro h1 { font-size: 26px; }
   .page-intro p { font-size: 12px; }
   .creature-grid, .market-grid { grid-template-columns: 1fr; gap: 10px; }
@@ -793,8 +806,15 @@ html { scroll-padding-top: calc(96px + env(safe-area-inset-top)); }
   .creature-card-body { padding: 0 12px 10px; }
   .creature-card .fui-CardFooter { min-height: 40px; padding: 0 12px; }
   .market-details { padding: 6px 12px 10px; }
-  .market-note { margin-bottom: 10px; padding: 10px; gap: 9px; }
-  .donation-note { margin: 0 0 10px; padding: 10px; gap: 9px; }
+  .market-note.fui-Card { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 5px 8px; margin-bottom: 10px; padding: 10px; }
+  .market-note > svg { grid-row: 1 / span 2; margin-top: 2px; font-size: 20px; }
+  .market-note > div { min-width: 0; }
+  .market-note div span { font-size: 10.5px; }
+  .market-note strong { grid-column: 2; font-size: 11px; }
+  .donation-note.fui-Card { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 5px 8px; margin: 0 0 10px; padding: 10px; }
+  .donation-note > svg { grid-row: 1; margin-top: 2px; }
+  .donation-note > div { min-width: 0; }
+  .donation-note > .fui-Button, .donation-status { grid-column: 2; justify-self: start; }
   .donation-note .muted-copy { display: none; }
   .donation-status { margin-left: 0; }
   .leaderboard-card table { min-width: 0; width: 100%; }

@@ -28,8 +28,6 @@ import {
   ArrowRightRegular,
   CheckmarkCircleRegular,
   CoinMultipleRegular,
-  HomeRegular,
-  InfoRegular,
   LeafOneRegular,
   LockClosedRegular,
   PlayRegular,
@@ -84,11 +82,17 @@ type Route = '/' | '/creatures' | '/market' | '/leaderboard' | '/login' | '/crea
 type LoadState = 'loading' | 'error' | 'empty' | 'data'
 type Connection = 'checking' | 'online' | 'guest'
 
+const uiAsset = (name: string) => `${import.meta.env.BASE_URL ?? '/'}game/ui/${name}.png`
+
+function RouteIcon({ name }: { name: string }) {
+  return <img className="nav-icon" src={uiAsset(name)} alt="" />
+}
+
 const routeTabs: { value: Route; label: string; icon: ReactElement }[] = [
-  { value: '/', label: 'Game', icon: <HomeRegular /> },
-  { value: '/creatures', label: 'Creatures', icon: <LeafOneRegular /> },
-  { value: '/market', label: 'Market', icon: <ShoppingBagRegular /> },
-  { value: '/leaderboard', label: 'Rankings', icon: <TrophyRegular /> },
+  { value: '/', label: 'Game', icon: <RouteIcon name="icon-shoes" /> },
+  { value: '/creatures', label: 'Pokemons', icon: <RouteIcon name="icon-pokeball" /> },
+  { value: '/market', label: 'Shop', icon: <RouteIcon name="icon-potion" /> },
+  { value: '/leaderboard', label: 'Rankings', icon: <RouteIcon name="icon-kings-rock" /> },
 ]
 
 function routeFromPath(path: string): Route {
@@ -193,7 +197,7 @@ function CreaturePortrait({ creature, formId, large = false }: { creature: Creat
       className={`creature-portrait motif-${creature.motif}${large ? ' creature-portrait-large' : ''}`}
       style={{ '--creature-light': creature.palette.light } as CSSProperties}
       role="img"
-      aria-label={`${creature.name}, ${creature.element} partner`}
+      aria-label={`${creature.name}, ${creature.element} Pokémon`}
     >
       <canvas ref={canvasRef} width={160} height={160} aria-hidden="true" />
     </div>
@@ -439,7 +443,7 @@ function App() {
       setProfile(await api.selectCreature(creature.id, formId))
       setNotice(`${creature.forms.find((form) => form.id === formId)?.name ?? creature.name} is ready for the trail.`)
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : 'Could not change your partner.')
+      setNotice(caught instanceof Error ? caught.message : 'Could not change your Pokémon.')
     } finally {
       setBusyKey('')
     }
@@ -452,7 +456,7 @@ function App() {
       setProfile(await api.purchaseCreature(creature.id))
       setNotice(`${creature.name} joined your team.`)
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : 'Could not unlock this partner.')
+      setNotice(caught instanceof Error ? caught.message : 'Could not unlock this Pokémon.')
     } finally {
       setBusyKey('')
     }
@@ -521,7 +525,7 @@ function App() {
         <main className="page-main">
           {connection === 'guest' && (
             <div className="guest-banner" role="status">
-              <InfoRegular />
+              <img className="guest-ball" src={uiAsset('icon-pokeball')} alt="" />
               <div>
                 <Text weight="semibold">Guest mode</Text>
                 <Text className="muted-copy">Progress and unlocks are saved in this browser.</Text>
@@ -544,8 +548,8 @@ function App() {
           )}
           {pageRoute === '/' && (!selectedCreature || !selectedForm) && (
             <section className="content-page">
-              <PageIntro eyebrow="EVERGREEN CIRCUIT" title={<>Your next <em>trail awaits.</em></>} description="Your partner is taking a moment to find the path." />
-              <StatePanel state={creatureState} onRetry={() => void refreshCreatures()} label="Partners" />
+              <PageIntro eyebrow="EVERGREEN CIRCUIT" title={<>Your next <em>trail awaits.</em></>} description="Your Pokémon is taking a moment to find the path." />
+              <StatePanel state={creatureState} onRetry={() => void refreshCreatures()} label="Pokémon" />
             </section>
           )}
 
@@ -607,7 +611,7 @@ function GamePage({
           <Text className="eyebrow">POKESURFERS · SUNNY MEADOW</Text>
           <h1>Ride the <em>sunny trail.</em></h1>
           <p>Dash through the meadow with {creature.name}. Every run brings a new little spark.</p>
-          <span className="hero-ready"><i /> YOUR PARTNER IS READY</span>
+          <span className="hero-ready"><i /> YOUR POKÉMON IS READY</span>
         </div>
         <div className="hero-companion" aria-hidden="true">
           <span className="hero-moon" />
@@ -619,9 +623,9 @@ function GamePage({
       </section>
 
       <section className="game-stats" aria-label="Player and trail summary">
-        <Card className="stat-card"><Text className="stat-label"><TrophyRegular /> TRAIL XP</Text><strong>{formatNumber(profile.progress[creature.id]?.xp ?? 0)}</strong><small>Earned with this partner</small></Card>
+        <Card className="stat-card"><Text className="stat-label"><TrophyRegular /> TRAIL XP</Text><strong>{formatNumber(profile.progress[creature.id]?.xp ?? 0)}</strong><small>Earned with this Pokémon</small></Card>
         <Card className="stat-card"><Text className="stat-label"><CoinMultipleRegular /> TRAIL COINS</Text><strong>{profile.coins}</strong><small>Earned by running</small></Card>
-        <Card className="stat-card"><Text className="stat-label"><LeafOneRegular /> PARTNER</Text><strong>{formName}</strong><small>Level {level} · {creature.element}</small></Card>
+        <Card className="stat-card"><Text className="stat-label"><img className="inline-sprite" src={uiAsset('icon-pokeball')} alt="" /> POKÉMON</Text><strong>{formName}</strong><small>Level {level} · {creature.element}</small></Card>
       </section>
 
       <section className="runner-section">
@@ -641,13 +645,13 @@ function GamePage({
           </div>
           <aside className="runner-aside">
             <Card className="companion-card">
-              <CardHeader header={<Text className="eyebrow">YOUR PARTNER</Text>} />
+              <CardHeader header={<Text className="eyebrow">YOUR POKÉMON</Text>} />
               <CreaturePortrait creature={creature} formId={formId} large />
               <Text className="companion-name">{formName}</Text>
-              <Text className="muted-copy">{creature.name} · {creature.element} partner</Text>
+              <Text className="muted-copy">{creature.name} · {creature.element} Pokémon</Text>
               <div className="level-row"><span>Level {level}</span><span>{profile.progress[creature.id]?.xp ?? 0} XP</span></div>
               <div className="xp-track"><span style={{ width: `${Math.min(100, (profile.progress[creature.id]?.xp ?? 0) % 100)}%` }} /></div>
-              <Button appearance="secondary" icon={<LeafOneRegular />} onClick={onOpenCreatures}>Manage partner</Button>
+              <Button appearance="secondary" icon={<img className="button-sprite" src={uiAsset('icon-pokeball')} alt="" />} onClick={onOpenCreatures}>Change Pokémon</Button>
             </Card>
             <Card className="controls-card">
               <Text className="eyebrow">HOW TO PLAY</Text>
@@ -675,7 +679,7 @@ function CreaturesPage({
 }) {
   return (
     <section className="content-page">
-      <PageIntro eyebrow="YOUR CREW" title={<>Small friends, <em>big legends.</em></>} description="Review your partners, their growing forms, and who’s ready to join you on the trail." />
+      <PageIntro icon="icon-pokeball" eyebrow="YOUR POKÉMON" title={<>Small friends, <em>big legends.</em></>} description="Review your Pokémon, their growing forms, and who's ready to join you on the trail." />
       <StatePanel state={state} onRetry={onRetry} label="Creatures" />
       {state === 'data' && (
         <div className="creature-grid">
@@ -697,7 +701,7 @@ function CreaturesPage({
                     </Button>
                   })}</div>
                 </div>
-                <CardFooter>{active ? <span className="status-positive"><CheckmarkCircleRegular /> Active partner</span> : unlocked ? <span className="status-neutral">Ready to select</span> : <span className="status-neutral">Adopt in the market</span>}</CardFooter>
+                <CardFooter>{active ? <span className="status-positive"><CheckmarkCircleRegular /> Active Pokémon</span> : unlocked ? <span className="status-neutral">Ready to select</span> : <span className="status-neutral">Adopt in the shop</span>}</CardFooter>
               </Card>
             )
           })}
@@ -721,8 +725,8 @@ function MarketPage({
   const offers = creatures.filter((creature) => !creature.starter)
   return (
     <section className="content-page">
-      <PageIntro eyebrow="THE WOODLAND MARKET" title={<>Find your next <em>partner.</em></>} description="Meet new partners, then bring their unlockable forms to life on the run." />
-      <Card className="market-note"><CoinMultipleRegular /><div><Text weight="semibold">Your coins are earned on the trail</Text><Text className="muted-copy">Every partner is unlocked with in-game coins. There are no real-money purchases.</Text></div><strong>{profile.coins} coins</strong></Card>
+      <PageIntro icon="icon-potion" eyebrow="POKÉ MART" title={<>Find your next <em>Pokémon.</em></>} description="Meet new Pokémon, then bring their unlockable forms to life on the run." />
+      <Card className="market-note"><CoinMultipleRegular /><div><Text weight="semibold">Your coins are earned on the trail</Text><Text className="muted-copy">Every Pokémon is unlocked with in-game coins. There are no real-money purchases.</Text></div><strong>{profile.coins} coins</strong></Card>
       <Card className="donation-note">
         <SparkleRegular />
         <div>
@@ -733,7 +737,7 @@ function MarketPage({
           ? <Button as="a" href={donationLink.href} target="_blank" rel="noopener noreferrer" appearance="secondary">Support PokeSurfers</Button>
           : <Text className="donation-status">Donation link not set up yet</Text>}
       </Card>
-      <StatePanel state={state} onRetry={onRetry} label="Partners" />
+      <StatePanel state={state} onRetry={onRetry} label="Pokémon" />
       {state === 'data' && <div className="market-grid">
         {offers.map((creature) => {
           const unlocked = profile.unlockedCreatureIds.includes(creature.id)
@@ -741,7 +745,7 @@ function MarketPage({
           return (
             <Card key={creature.id} className="market-card">
               <div className="market-art"><CreaturePortrait creature={creature} large /><span className="element-pill">{creature.element}</span></div>
-              <CardHeader header={<Text size={500} weight="semibold">{creature.name}</Text>} description={progressionUnlock ? 'A cloud-born friend, found through progression.' : `${creature.element} trail partner`} />
+              <CardHeader header={<Text size={500} weight="semibold">{creature.name}</Text>} description={progressionUnlock ? 'A cloud-born friend, found through progression.' : `${creature.element} trail Pokémon`} />
               <div className="market-details">
                 <div><span>UNLOCK</span><strong>{progressionUnlock ? 'Reach level 6' : `${creature.price} coins`}</strong></div>
                 <div><span>FORMS</span><strong>{creature.forms.length} to discover</strong></div>
@@ -776,11 +780,12 @@ function RankingsPage({
   return (
     <section className="content-page rankings-page">
       <PageIntro
+        icon="icon-kings-rock"
         eyebrow="EVERY RUN LEAVES A MARK"
         title={<>The fastest <em>trails.</em></>}
         description={guest
           ? 'Your best runs are stored on this device. Connect the PokeSurfers server to join the global leaderboard.'
-          : 'See the runners who found their rhythm, and the partners that carried them.'}
+          : 'See the runners who found their rhythm, and the Pokémon that carried them.'}
       />
       <div className="section-heading"><div><Text className="eyebrow">{guest ? 'SAVED IN THIS BROWSER' : 'GLOBAL STANDINGS'}</Text><h2>Leaderboard</h2></div><span className="section-hint">{guest ? 'Your personal best' : 'Best verified scores'}</span></div>
       <StatePanel state={state} onRetry={onRetry} label="Rankings" />
@@ -801,13 +806,22 @@ function RankingsPage({
           </Table>
         </div>
       </Card>}
-      <Card className="rankings-footnote"><TrophyRegular /><Text>{guest ? 'Guest scores stay in this browser. Connect an account to compete globally.' : 'Scores are earned in-game. Keep running to move up the trail.'}</Text></Card>
+      <Card className="rankings-footnote"><img className="inline-sprite" src={uiAsset('icon-kings-rock')} alt="" /><Text>{guest ? 'Guest scores stay in this browser. Connect an account to compete globally.' : 'Scores are earned in-game. Keep running to move up the trail.'}</Text></Card>
     </section>
   )
 }
 
-function PageIntro({ eyebrow, title, description }: { eyebrow: string; title: ReactNode; description: string }) {
-  return <header className="page-intro"><Text className="eyebrow">{eyebrow}</Text><h1>{title}</h1><p>{description}</p></header>
+function PageIntro({ eyebrow, title, description, icon }: { eyebrow: string; title: ReactNode; description: string; icon?: string }) {
+  return (
+    <header className={`page-intro${icon ? ' page-intro-icon' : ''}`}>
+      {icon && <img className="page-icon" src={uiAsset(icon)} alt="" />}
+      <div>
+        <Text className="eyebrow">{eyebrow}</Text>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+    </header>
+  )
 }
 
 export default App
