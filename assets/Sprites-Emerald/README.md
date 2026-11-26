@@ -26,6 +26,7 @@ Source sheets from [The Spriters Resource](https://www.spriters-resource.com/gam
 - `frontend/public/game/ui/ball-*.png` — the four 12×12 ball crops.
 - `frontend/public/game/ui/icon-pokeball.png`, `icon-potion.png`, `icon-shoes.png` — 24×24 item icons cut from the Item Icons sheet: navigation tabs, page headers and the favicon. `icon-kings-rock.png` is the 32×32 PokéSprite sprite described in `assets/Sprites-UI/README.md`.
 - `frontend/public/game/ui/fx-steam.png` — the steam puff from the Steam Effects sheet, used by Pueblo Lavacalda's hot-spring weather.
+- `frontend/public/game/people/*.png` — front-facing character and Pokémon billboards placed next to their landmark; sources and credits in `assets/Sprites-Emerald/people-source/README.md`.
 - `frontend/public/game/ui/font-emerald.png` + `frontend/src/pixelFontData.ts` — the bitmap font atlas and metrics.
 
 `interface.png` (Battle Frontier UI) is a reference sheet kept for future UI work; the runner does not use it yet.
