@@ -11,9 +11,9 @@ backend/data/
 .env.*
 !.env.example
 
-# Source sprite checkout (PMD SpriteCollab, ~3 GB, 227k files). Only the
-# trimmed frames used at runtime are committed under
-# frontend/public/game/sprites; regenerate them with `npm run sprites`.
+# Source sprite checkout (PMD SpriteCollab, ~3 GB, 227k files). Optional: the
+# walk sheets needed to rebuild the roster are vendored in assets/Sprites-Walk,
+# and only the trimmed runtime frames live in frontend/public/game/sprites.
 assets/Sprites/
 
 # OS / editor noise

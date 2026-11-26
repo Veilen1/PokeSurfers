@@ -1,10 +1,17 @@
 /**
- * Extracts walk-cycle sprites for every companion from the local
- * PMDCollab/SpriteCollab checkout in `assets/Sprites` and writes them to
+ * Extracts walk-cycle sprites for every companion and writes them to
  * `frontend/public/game/sprites/<species>/<direction>/`.
  *
- * The public sprite folders are what the game client loads at runtime, so this
- * script only needs to run when a companion is added or its artwork changes.
+ * Sources, in order:
+ *   1. `assets/Sprites/sprite` — a full PMDCollab/SpriteCollab checkout. It is
+ *      about 3 GB, so it is optional and gitignored.
+ *   2. `assets/Sprites-Walk/sprite` — the committed walk sheet, AnimData and
+ *      credits of each companion, so a clean clone can rebuild without it.
+ *
+ * Only three files per species are read: Walk-Anim.png, AnimData.xml and
+ * credits.txt. The public sprite folders are what the game client loads at
+ * runtime, so this script only needs to run when a companion is added or its
+ * artwork changes.
  *
  * Usage: node scripts/extract-sprites.mjs
  */
@@ -14,7 +21,10 @@ import { fileURLToPath } from 'node:url'
 import { deflateSync, inflateSync } from 'node:zlib'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const sourceRoot = join(root, 'assets', 'Sprites', 'sprite')
+const sourceRoots = [
+  { base: join(root, 'assets', 'Sprites', 'sprite'), label: 'assets/Sprites (full checkout)' },
+  { base: join(root, 'assets', 'Sprites-Walk', 'sprite'), label: 'assets/Sprites-Walk (vendored)' },
+]
 const outputRoot = join(root, 'frontend', 'public', 'game', 'sprites')
 const manifestPath = join(root, 'frontend', 'src', 'gameSpriteManifest.ts')
 
@@ -239,6 +249,17 @@ function findCredits(speciesPath) {
   return null
 }
 
+/** Full SpriteCollab checkout first, then the committed walk-only copy. */
+function resolveSpecies(species) {
+  for (const source of sourceRoots) {
+    const path = join(source.base, species)
+    if (existsSync(join(path, 'Walk-Anim.png')) && existsSync(join(path, 'AnimData.xml'))) {
+      return { path, label: source.label }
+    }
+  }
+  return null
+}
+
 function differingPixels(actual, expected) {
   if (actual.width !== expected.width || actual.height !== expected.height) return -1
   let count = 0
@@ -249,15 +270,18 @@ function differingPixels(actual, expected) {
 }
 
 const manifest = []
+const usedSources = new Set()
 
 for (const companion of companions) {
-  const speciesPath = join(sourceRoot, companion.species)
-  const sheetPath = join(speciesPath, 'Walk-Anim.png')
-  if (!existsSync(sheetPath)) {
-    console.warn(`skip ${companion.folder}: ${relative(root, sheetPath)} is missing`)
+  const source = resolveSpecies(companion.species)
+  if (!source) {
+    console.warn(`skip ${companion.folder}: no Walk sheet for species ${companion.species} in any source`)
     continue
   }
+  const speciesPath = source.path
+  usedSources.add(source.label)
 
+  const sheetPath = join(speciesPath, 'Walk-Anim.png')
   const { frameWidth, frameHeight, frames } = readWalkAnimation(speciesPath)
   const sheet = decodePng(readFileSync(sheetPath))
   if (sheet.width !== frameWidth * frames || sheet.height !== frameHeight * 8) {
@@ -305,4 +329,5 @@ export interface GameSpriteManifestEntry {
 export const gameSpriteManifest: GameSpriteManifestEntry[] = ${JSON.stringify(manifest, null, 2)}
 `
 writeFileSync(manifestPath, manifestSource)
-console.log(`\nWrote ${relative(root, manifestPath)} with ${manifest.length} companions.`)
+console.log(`\nSources: ${[...usedSources].join(', ') || 'none'}`)
+console.log(`Wrote ${relative(root, manifestPath)} with ${manifest.length} companions.`)

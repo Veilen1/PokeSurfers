@@ -15,7 +15,7 @@ Pokémon and Pokémon character designs are trademarks of Nintendo, Creatures In
 
 ## Regenerating
 
-The committed PNGs are generated, not hand-edited. With a SpriteCollab checkout at `assets/Sprites`:
+The committed PNGs are generated, not hand-edited. A clean clone can rebuild them from the walk sources in `assets/Sprites-Walk`; if a full SpriteCollab checkout exists at `assets/Sprites`, the script prefers it:
 
 ```sh
 node scripts/extract-sprites.mjs
