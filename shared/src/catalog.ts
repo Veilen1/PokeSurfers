@@ -1,5 +1,9 @@
-import type { Creature } from '@trailkin/shared'
+import type { Creature } from './types/entities.js'
 
+/**
+ * The partner catalog shared by the API and the offline guest client, so both
+ * offer the same creatures, prices and evolution levels.
+ */
 export const creatureCatalog: Omit<Creature, 'unlocked' | 'level'>[] = [
   {
     id: 'bulbasaur',
@@ -84,7 +88,3 @@ export const creatureCatalog: Omit<Creature, 'unlocked' | 'level'>[] = [
     ],
   },
 ]
-
-export function levelForXp(xp: number): number {
-  return Math.floor(xp / 100) + 1
-}

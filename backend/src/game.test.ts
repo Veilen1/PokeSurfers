@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isValidRun, levelForXp, rewardsForRun } from './game.js'
+import { isValidRun, levelForXp, rewardsForRun } from '@trailkin/shared'
 
 describe('runner progression', () => {
   it('unlocks creature forms at the planned experience milestones', () => {

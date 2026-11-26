@@ -8,6 +8,11 @@
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 
+    /* Shared domain code is consumed from source, like the Vite alias. */
+    "paths": {
+      "@trailkin/shared": ["../shared/src/index.ts"]
+    },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

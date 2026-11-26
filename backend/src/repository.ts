@@ -7,7 +7,7 @@ import type {
   RunResult,
   SubmitRunRequest,
 } from '@trailkin/shared'
-import { creatureCatalog, levelForXp } from './catalog.js'
+import { creatureCatalog, levelForXp } from '@trailkin/shared'
 import { AppError } from './errors.js'
 
 export interface IGameRepository {

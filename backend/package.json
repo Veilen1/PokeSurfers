@@ -4,11 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "predev": "npm --prefix ../shared run build",
     "build": "tsc -p tsconfig.json",
+    "prebuild": "npm --prefix ../shared run build",
     "start": "node dist/server.js",
     "migrate": "node-pg-migrate up --migrations-dir migrations",
     "migrate:rollback": "node-pg-migrate down --migrations-dir migrations",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pretest": "npm --prefix ../shared run build"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

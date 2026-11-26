@@ -1,9 +1,8 @@
+import { submitRunSchema, isValidRun, rewardsForRun } from '@trailkin/shared'
 import type { FastifyPluginAsync } from 'fastify'
-import { submitRunSchema } from '@trailkin/shared'
 import type { IAuthService } from '../auth.js'
 import { requireAuthentication } from '../auth.js'
 import { AppError } from '../errors.js'
-import { isValidRun, rewardsForRun } from '../game.js'
 import { parseInput } from '../validation.js'
 import type { IGameRepository } from '../repository.js'
 
