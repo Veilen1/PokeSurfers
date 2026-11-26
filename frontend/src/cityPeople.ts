@@ -26,6 +26,7 @@ export const CITY_PEOPLE: Record<string, CityPerson[]> = {
   rustboro: [
     { key: 'roxanne', building: 'pokemon-gym', name: 'Petra' },
     { key: 'devon_employee', building: 'celadon-store', name: 'Devon S.A.' },
+    { key: 'maxie', building: 'celadon-store', name: 'Maxie' },
   ],
   dewford: [
     { key: 'brawly', building: 'pokemon-gym', name: 'Marcial' },
