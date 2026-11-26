@@ -156,7 +156,13 @@ function spawnWave(game: GameState): void {
 
   if (roll < 0.4) {
     const lane = pick(openLanes)
-    const tall = difficulty > 0.3 && Math.random() < 0.32
+    // Only build a tall tower when another free lane can host its stepping
+    // stone; without the step the tower would be impossible to clear on foot.
+    // Prefer the adjacent free lane so the runner only needs one lane change.
+    const stepLane = openLanes
+      .filter((candidate) => candidate !== lane)
+      .sort((a, b) => Math.abs(a - lane) - Math.abs(b - lane))[0]
+    const tall = difficulty > 0.3 && stepLane !== undefined && Math.random() < 0.32
     const height = tall ? TALL_PLATFORM_HEIGHT : PLATFORM_HEIGHT
     const length = 13 + Math.random() * 9 + difficulty * 26
     const farEdge = -56 - length
@@ -172,13 +178,16 @@ function spawnWave(game: GameState): void {
     addCoinLine(game, lane, farEdge + 3, 3, 3.6, height + 1)
     if (Math.random() < 0.22) addPowerup(game, lane, farEdge + length - 4, height + 1.2)
 
-    if (tall && openLanes.length >= 3) {
+    if (tall) {
       // A lower platform in a neighbouring lane becomes the stepping stone
-      // used to reach the tall roof when Super Sneakers are not active.
-      const stepLane = openLanes.find((candidate) => candidate !== lane)
+      // used to reach the tall roof when Super Sneakers are not active. It has
+      // to start well before the tower so the runner can land on it, keep
+      // running and jump onto the tall roof instead of meeting its front wall
+      // at the same z as the step.
       if (stepLane !== undefined) {
-        const stepLength = Math.max(10, length * 0.75)
-        const stepFar = -56 - stepLength
+        const stepNear = -36
+        const stepLength = Math.max(26, length * 0.8)
+        const stepFar = stepNear - stepLength
         addObject(game, {
           lane: stepLane,
           z: stepFar + stepLength / 2,

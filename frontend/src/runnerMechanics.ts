@@ -14,7 +14,8 @@ export const MAX_MULTIPLIER = 10
 export const METERS_PER_MULTIPLIER = 200
 export const POINTS_PER_METER = 8
 export const MOUNT_TOLERANCE = 0.55
-export const TALL_PLATFORM_HEIGHT = 4
+/** Just high enough that a ground jump cannot mount it, but a jump from the low platform can. */
+export const TALL_PLATFORM_HEIGHT = 3.9
 
 export interface PlayerState {
   lane: number
@@ -90,14 +91,23 @@ export function stepPlayer(state: PlayerState, delta: number, platforms: readonl
   }
 
   if (!state.grounded || state.y > support + 0.001) {
+    // Remember the height before gravity so a runner can only land on a roof
+    // by falling onto it from above. Without this a mid-air lane change could
+    // pop the runner onto the side of a tall platform from below.
+    const previousY = state.y
     state.velocityY -= GRAVITY * delta
     state.y += state.velocityY * delta
-    if (state.y <= support) {
-      const landed = !state.grounded && state.velocityY < 0
-      state.y = support
-      state.velocityY = 0
-      state.grounded = true
-      return { wallHit: false, landed }
+    if (previousY >= support - 0.001) {
+      if (state.y <= support) {
+        const landed = !state.grounded && state.velocityY < 0
+        state.y = support
+        state.velocityY = 0
+        state.grounded = true
+        return { wallHit: false, landed }
+      }
+    } else if (support > 0) {
+      // The runner is inside the solid side of a platform, not above it.
+      return { wallHit: true, landed: false }
     }
     state.grounded = false
     return { wallHit: false, landed: false }

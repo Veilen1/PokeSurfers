@@ -4,6 +4,7 @@ import {
   JUMP_VELOCITY,
   MAX_MULTIPLIER,
   METERS_PER_MULTIPLIER,
+  MOUNT_TOLERANCE,
   PLATFORM_HEIGHT,
   SPEED_CAP,
   SPEED_START,
@@ -119,8 +120,12 @@ describe('runner physics', () => {
     const tall: PlatformLike = { lane: 1, z: 0, length: 20, height: TALL_PLATFORM_HEIGHT }
     const normalApex = (JUMP_VELOCITY ** 2) / (2 * GRAVITY)
     const boostedApex = ((JUMP_VELOCITY * 1.35) ** 2) / (2 * GRAVITY)
+    const platformApex = PLATFORM_HEIGHT + normalApex
 
-    expect(normalApex).toBeLessThan(TALL_PLATFORM_HEIGHT)
+    // A normal ground jump must stay below the tower, even at its apex.
+    expect(normalApex).toBeLessThan(TALL_PLATFORM_HEIGHT - MOUNT_TOLERANCE)
+    // From the low platform, the same jump clears it with room to spare.
+    expect(platformApex).toBeGreaterThan(TALL_PLATFORM_HEIGHT + 0.25)
     expect(boostedApex).toBeGreaterThan(TALL_PLATFORM_HEIGHT)
     expect(PLATFORM_HEIGHT + normalApex).toBeGreaterThan(TALL_PLATFORM_HEIGHT)
 
@@ -133,6 +138,35 @@ describe('runner physics', () => {
 
     const low = createPlayerState()
     expect(stepPlayer(low, 1 / 60, [tall]).wallHit).toBe(true)
+  })
+
+  it('does not snap onto a tall roof from the side after a mid-air lane change', () => {
+    const tall: PlatformLike = { lane: 1, z: 0, length: 20, height: TALL_PLATFORM_HEIGHT }
+    const sideEntry = createPlayerState()
+    sideEntry.y = 3
+    sideEntry.velocityY = 0
+    sideEntry.grounded = false
+
+    const result = stepPlayer(sideEntry, 1 / 60, [tall])
+    expect(result.wallHit).toBe(true)
+    expect(sideEntry.y).toBeLessThan(TALL_PLATFORM_HEIGHT)
+  })
+
+  it('lands on a tall roof when falling onto it from above', () => {
+    const tall: PlatformLike = { lane: 1, z: 0, length: 20, height: TALL_PLATFORM_HEIGHT }
+    const falling = createPlayerState()
+    falling.y = TALL_PLATFORM_HEIGHT + 0.3
+    falling.velocityY = 0
+    falling.grounded = false
+
+    let landed = false
+    for (let frame = 0; frame < 30; frame += 1) {
+      landed = stepPlayer(falling, 1 / 60, [tall]).landed || landed
+      if (landed) break
+    }
+    expect(landed).toBe(true)
+    expect(falling.y).toBe(TALL_PLATFORM_HEIGHT)
+    expect(falling.grounded).toBe(true)
   })
 
   it('only clears logs while above them and coins at the right height', () => {
