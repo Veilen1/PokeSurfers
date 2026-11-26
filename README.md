@@ -46,6 +46,21 @@ npm run dev
 
 The Compose database binds only to `127.0.0.1:5433`; the frontend remains at `http://localhost:5173`.
 
+## Guest mode and frontend-only deploys
+
+The app probes `GET /api/health` when it starts. If a PokeSurfers API answers with its JSON health payload, accounts, server-side progression and the global leaderboard are enabled. Otherwise the game opens directly in **guest mode**: no login, no backend, and everything the player earns is saved in `localStorage`.
+
+Guest mode keeps coins, XP and levels, unlocked partners, the selected form and the last 50 runs under `pokesurfers.guest.v1`. It uses the same catalog and reward rules as the API (both import them from the `shared` workspace), so progression feels identical.
+
+Deploying only the frontend is supported:
+
+```sh
+npm run build
+# serve frontend/dist from any static host at the domain root
+```
+
+Set `VITE_API_BASE_URL` only when an API exists. Static hosts that answer unknown paths with `index.html` are detected correctly (the health check requires JSON), so the game falls back to guest mode instead of hanging on the login screen. The header's **Connect account** button re-runs the check and switches to the normal login flow when a server appears; guest progress stays in the browser and is not transferred to the account. Clearing site data resets guest progress, and guest scores are not part of the global rankings.
+
 ## Controls
 
 - Use `←` / `→` or `A` / `D` to change lanes.

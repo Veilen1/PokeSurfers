@@ -12,7 +12,7 @@ import type {
 } from '@trailkin/shared'
 import type { ApiClient } from './types'
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '')
+export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '')
 
 class ApiRequestError extends Error {
   readonly status: number

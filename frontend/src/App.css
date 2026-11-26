@@ -366,6 +366,10 @@
 .notice-card { display: flex; align-items: center; gap: 10px; margin: 0 0 15px; padding: 10px 13px; border: 1px solid rgba(83, 216, 207, .25); background: rgba(83, 216, 207, .06); }
 .notice-card > svg { color: #78E4D9; }
 .notice-card > span { flex: 1; color: #DCECF8; font-size: 12px; }
+.guest-banner { display: flex; align-items: center; gap: 10px; margin: 0 0 15px; padding: 10px 13px; border: 1px solid rgba(255, 213, 140, .28); border-radius: 8px; background: rgba(255, 213, 140, .07); }
+.guest-banner > svg { flex: none; color: #FFD58C; }
+.guest-banner > div { display: flex; flex-direction: column; gap: 1px; }
+.guest-banner .muted-copy { font-size: 12px; }
 .muted-copy { color: #AFC2D8 !important; }
 
 .account-layout { width: min(1080px, calc(100% - 40px)); min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, .84fr); gap: 18px; align-items: center; margin: 0 auto; padding: 34px 0; }

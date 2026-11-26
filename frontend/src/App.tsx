@@ -29,6 +29,7 @@ import {
   CheckmarkCircleRegular,
   CoinMultipleRegular,
   HomeRegular,
+  InfoRegular,
   LeafOneRegular,
   LockClosedRegular,
   PlayRegular,
@@ -37,7 +38,9 @@ import {
   SparkleRegular,
   TrophyRegular,
 } from '@fluentui/react-icons'
-import { api } from './api'
+import { api, liveClient, setApiClient } from './api'
+import { detectBackend } from './api/detect'
+import { createGuestClient } from './guest/guestClient'
 import type { Credentials, Creature, LeaderboardEntry, PlayerProfile, RunResult } from '@trailkin/shared'
 import GameCanvas from './GameCanvas'
 import { drawSpriteFrame, loadCreatureSprite, spriteFrame, type CreatureSprite } from './creatureSprites'
@@ -79,6 +82,7 @@ if (donationLink && donationLink.protocol !== 'https:') {
 
 type Route = '/' | '/creatures' | '/market' | '/leaderboard' | '/login' | '/create-account'
 type LoadState = 'loading' | 'error' | 'empty' | 'data'
+type Connection = 'checking' | 'online' | 'guest'
 
 const routeTabs: { value: Route; label: string; icon: ReactElement }[] = [
   { value: '/', label: 'Game', icon: <HomeRegular /> },
@@ -292,6 +296,8 @@ function App() {
   const [creatureState, setCreatureState] = useState<LoadState>('loading')
   const [leaderState, setLeaderState] = useState<LoadState>('loading')
   const [profileLoading, setProfileLoading] = useState(true)
+  const [connection, setConnection] = useState<Connection>('checking')
+  const [connecting, setConnecting] = useState(false)
   const [notice, setNotice] = useState('')
   const [busyKey, setBusyKey] = useState('')
   const [lastRun, setLastRun] = useState<RunReport | null>(null)
@@ -323,24 +329,36 @@ function App() {
 
   useEffect(() => {
     let active = true
-    Promise.all([
-      api.getCurrentProfile().then((nextProfile) => {
-        if (active) setProfile(nextProfile)
-      }).catch(() => {
-        if (active) setProfile(null)
-      }),
-      api.listCreatures().then((nextCreatures) => {
-        if (!active) return
+    void (async () => {
+      const online = await detectBackend()
+      if (!active) return
+      const client = online ? liveClient : createGuestClient()
+      setApiClient(client)
+      setConnection(online ? 'online' : 'guest')
+      const initialPath = window.location.pathname
+      if (!online && (initialPath === '/login' || initialPath === '/create-account')) {
+        goTo('/')
+        setNotice('Accounts need the PokeSurfers server. You are playing as a guest, and your progress is saved in this browser.')
+      }
+
+      const [profileResult, creaturesResult] = await Promise.allSettled([
+        client.getCurrentProfile(),
+        client.listCreatures(),
+      ])
+      if (!active) return
+
+      setProfile(profileResult.status === 'fulfilled' ? profileResult.value : null)
+      if (creaturesResult.status === 'fulfilled') {
+        const nextCreatures = creaturesResult.value
         setCreatures(nextCreatures)
         setCreatureState(nextCreatures.length === 0 ? 'empty' : 'data')
-      }).catch(() => {
-        if (active) setCreatureState('error')
-      }),
-    ]).finally(() => {
-      if (active) setProfileLoading(false)
-    })
+      } else {
+        setCreatureState('error')
+      }
+      setProfileLoading(false)
+    })()
     return () => { active = false }
-  }, [])
+  }, [goTo])
 
   useEffect(() => {
     if (route !== '/leaderboard' || !profile) return
@@ -358,6 +376,9 @@ function App() {
     ? profile.progress[selectedCreature.id] ?? { xp: 0, level: 1 }
     : { xp: 0, level: 1 }
   const selectedForm = selectedCreature?.forms.find((form) => form.id === profile?.selectedFormId) ?? selectedCreature?.forms[0]
+  const authRoute = route === '/login' || route === '/create-account'
+  // Guests have no account to sign in to, so auth URLs fall back to the trail.
+  const pageRoute: Route = connection === 'guest' && authRoute ? '/' : route
 
   const handleProfile = (nextProfile: Profile) => {
     setProfile(nextProfile)
@@ -370,6 +391,35 @@ function App() {
     await api.logout()
     setProfile(null)
     goTo('/login')
+  }
+
+  const handleConnect = async () => {
+    if (connecting) return
+    setConnecting(true)
+    setNotice('')
+    try {
+      if (!(await detectBackend())) {
+        setNotice('No PokeSurfers server found. You are still playing as a guest.')
+        return
+      }
+      setApiClient(liveClient)
+      const next = await liveClient.getCurrentProfile()
+      setConnection('online')
+      setProfile(next)
+      setLastRun(null)
+      if (next) {
+        setNotice(`Connected as ${next.displayName}.`)
+        void refreshCreatures()
+      } else {
+        goTo('/login')
+      }
+    } catch (error) {
+      setApiClient(createGuestClient())
+      setConnection('guest')
+      setNotice(error instanceof Error ? error.message : 'Could not reach the PokeSurfers server.')
+    } finally {
+      setConnecting(false)
+    }
   }
 
   const handleSelectCreature = async (creature: Creature, formId: string) => {
@@ -417,7 +467,7 @@ function App() {
     return <FluentProvider theme={theme}><main className="boot-screen"><Spinner label="Preparing your trail…" /></main></FluentProvider>
   }
 
-  if (route === '/login' || route === '/create-account') {
+  if (authRoute && connection !== 'guest') {
     return <FluentProvider theme={theme}><AccountPage initialRoute={route} onComplete={handleProfile} navigate={goTo} /></FluentProvider>
   }
 
@@ -438,22 +488,39 @@ function App() {
               <span className="coin-balance"><CoinMultipleRegular />{profile.coins} <small>coins</small></span>
               <Avatar name={profile.displayName} size={32} color="brand" />
               <span className="username-label">{profile.displayName}</span>
-              <Button appearance="subtle" className="account-link" onClick={() => goTo('/create-account')}>Create account</Button>
-              <Button appearance="subtle" icon={<SignOutRegular />} aria-label="Sign out" title="Sign out" onClick={() => void handleLogout()} />
+              {connection === 'guest' ? (
+                <Button appearance="subtle" className="account-link" disabled={connecting} onClick={() => void handleConnect()}>
+                  {connecting ? 'Looking for server…' : 'Connect account'}
+                </Button>
+              ) : (
+                <>
+                  <Button appearance="subtle" className="account-link" onClick={() => goTo('/create-account')}>Create account</Button>
+                  <Button appearance="subtle" icon={<SignOutRegular />} aria-label="Sign out" title="Sign out" onClick={() => void handleLogout()} />
+                </>
+              )}
             </div>
           </Toolbar>
         </header>
 
         <nav className="primary-nav" aria-label="Main navigation">
-          <TabList selectedValue={route} onTabSelect={(_, data) => goTo(data.value as Route)}>
+          <TabList selectedValue={pageRoute} onTabSelect={(_, data) => goTo(data.value as Route)}>
             {routeTabs.map((tab) => <Tab key={tab.value} value={tab.value} icon={tab.icon}>{tab.label}</Tab>)}
           </TabList>
         </nav>
 
         <main className="page-main">
+          {connection === 'guest' && (
+            <div className="guest-banner" role="status">
+              <InfoRegular />
+              <div>
+                <Text weight="semibold">Guest mode</Text>
+                <Text className="muted-copy">No server detected. Coins, levels and unlocks are saved in this browser only.</Text>
+              </div>
+            </div>
+          )}
           {notice && <Card className="notice-card" role="status"><CheckmarkCircleRegular /><Text>{notice}</Text><Button appearance="subtle" onClick={() => setNotice('')}>Dismiss</Button></Card>}
 
-          {route === '/' && selectedCreature && selectedForm && (
+          {pageRoute === '/' && selectedCreature && selectedForm && (
             <GamePage
               profile={profile}
               creature={selectedCreature}
@@ -465,14 +532,14 @@ function App() {
               onOpenCreatures={() => goTo('/creatures')}
             />
           )}
-          {route === '/' && (!selectedCreature || !selectedForm) && (
+          {pageRoute === '/' && (!selectedCreature || !selectedForm) && (
             <section className="content-page">
               <PageIntro eyebrow="EVERGREEN CIRCUIT" title={<>Your next <em>trail awaits.</em></>} description="Your partner is taking a moment to find the path." />
               <StatePanel state={creatureState} onRetry={() => void refreshCreatures()} label="Partners" />
             </section>
           )}
 
-          {route === '/creatures' && (
+          {pageRoute === '/creatures' && (
             <CreaturesPage
               state={creatureState}
               creatures={creatures}
@@ -484,7 +551,7 @@ function App() {
             />
           )}
 
-          {route === '/market' && (
+          {pageRoute === '/market' && (
             <MarketPage
               state={creatureState}
               creatures={creatures}
@@ -495,12 +562,13 @@ function App() {
             />
           )}
 
-          {route === '/leaderboard' && (
+          {pageRoute === '/leaderboard' && (
             <RankingsPage
               state={leaderState}
               leaders={leaders}
               creatures={creatures}
               profile={profile}
+              guest={connection === 'guest'}
               onRetry={() => { setLeaderState('loading'); void refreshLeaders() }}
             />
           )}
@@ -686,22 +754,29 @@ function MarketPage({
 }
 
 function RankingsPage({
-  state, leaders, creatures, profile, onRetry,
+  state, leaders, creatures, profile, guest, onRetry,
 }: {
   state: LoadState
   leaders: Leader[]
   creatures: Creature[]
   profile: Profile
+  guest: boolean
   onRetry: () => void
 }) {
   return (
     <section className="content-page rankings-page">
-      <PageIntro eyebrow="EVERY RUN LEAVES A MARK" title={<>The fastest <em>trails.</em></>} description="See the runners who found their rhythm, and the partners that carried them." />
-      <div className="section-heading"><div><Text className="eyebrow">GLOBAL STANDINGS</Text><h2>Leaderboard</h2></div><span className="section-hint">Best verified scores</span></div>
+      <PageIntro
+        eyebrow="EVERY RUN LEAVES A MARK"
+        title={<>The fastest <em>trails.</em></>}
+        description={guest
+          ? 'Your best runs are stored on this device. Connect the PokeSurfers server to join the global leaderboard.'
+          : 'See the runners who found their rhythm, and the partners that carried them.'}
+      />
+      <div className="section-heading"><div><Text className="eyebrow">{guest ? 'SAVED IN THIS BROWSER' : 'GLOBAL STANDINGS'}</Text><h2>Leaderboard</h2></div><span className="section-hint">{guest ? 'Your personal best' : 'Best verified scores'}</span></div>
       <StatePanel state={state} onRetry={onRetry} label="Rankings" />
       {state === 'data' && <Card className="leaderboard-card">
         <div className="table-scroll">
-          <Table aria-label="Global PokeSurfers leaderboard">
+          <Table aria-label={guest ? 'Guest personal best' : 'Global PokeSurfers leaderboard'}>
             <TableHeader><TableRow><TableHeaderCell>Rank</TableHeaderCell><TableHeaderCell>Runner</TableHeaderCell><TableHeaderCell>Best score</TableHeaderCell><TableHeaderCell>Creature form</TableHeaderCell></TableRow></TableHeader>
             <TableBody>{leaders.map((leader, index) => {
               const isYou = leader.player === profile.displayName
@@ -716,7 +791,7 @@ function RankingsPage({
           </Table>
         </div>
       </Card>}
-      <Card className="rankings-footnote"><TrophyRegular /><Text>Scores are earned in-game. Keep running to move up the trail.</Text></Card>
+      <Card className="rankings-footnote"><TrophyRegular /><Text>{guest ? 'Guest scores stay in this browser. Connect an account to compete globally.' : 'Scores are earned in-game. Keep running to move up the trail.'}</Text></Card>
     </section>
   )
 }
