@@ -1,0 +1,29 @@
+{
+  "name": "trailkin-runner",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail -n API,WEB \"npm run dev --workspace=@trailkin/api\" \"npm run dev --workspace=frontend\"",
+    "build": "npm run build --workspace=@trailkin/shared && npm run build --workspace=@trailkin/api && npm run build --workspace=frontend",
+    "sprites": "node scripts/extract-sprites.mjs",
+    "sprites:buildings": "node scripts/extract-frlg-buildings.mjs",
+    "balls": "powershell -ExecutionPolicy Bypass -File scripts/extract-emerald-balls.ps1",
+    "buildings:emerald": "powershell -ExecutionPolicy Bypass -File scripts/extract-emerald-buildings.ps1",
+    "ui:emerald": "powershell -ExecutionPolicy Bypass -File scripts/extract-emerald-ui.ps1",
+    "assets:emerald": "npm run balls && npm run buildings:emerald && npm run ui:emerald && npm run font",
+    "font": "powershell -ExecutionPolicy Bypass -File scripts/extract-emerald-font.ps1",
+    "audio": "node scripts/prepare-audio.mjs",
+    "test": "npm run test --workspace=@trailkin/api"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "^7.0.2"
+  }
+}

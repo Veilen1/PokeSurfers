@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+frontend/dist/
+backend/dist/
+shared/dist/
+
+# Local runtime data and environment
+backend/data/
+.azure/.preview-temp/
+.env
+.env.*
+!.env.example
+
+# Source sprite checkout (PMD SpriteCollab, ~3 GB, 227k files). Only the
+# trimmed frames used at runtime are committed under
+# frontend/public/game/sprites; regenerate them with `npm run sprites`.
+assets/Sprites/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
