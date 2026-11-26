@@ -75,8 +75,8 @@ function measureAnchor(images: HTMLImageElement[]): number {
 
 /**
  * Loads (and caches) every walk frame of a companion form. Resolves to null
- * when the form has no sprite set, so callers can fall back to the
- * hand-authored pixel art.
+ * when the form has no sprite set; the runner then shows the Poké Ball
+ * placeholder instead of any hand-drawn character.
  */
 export function loadCreatureSprite(formId: string): Promise<CreatureSprite | null> {
   const cached = spriteCache.get(formId)
@@ -101,7 +101,7 @@ export function loadCreatureSprite(formId: string): Promise<CreatureSprite | nul
       },
     }))
     .catch((error: unknown) => {
-      console.warn(`Sprite set for "${formId}" could not be loaded. Falling back to pixel art.`, error)
+      console.warn(`Sprite set for "${formId}" could not be loaded. Using the Poké Ball placeholder.`, error)
       return null
     })
   spriteCache.set(formId, promise)

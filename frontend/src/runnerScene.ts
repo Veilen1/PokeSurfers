@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 import type { Creature } from '@trailkin/shared'
 import { SPRITE_FRAME_SECONDS, loadCreatureSprite, type CreatureSprite, type SpriteDirection } from './creatureSprites'
-import { drawPixelCreature } from './pixelCreatures'
 import { PLAYER_HEIGHT, PLAYER_Z, platformTopAt, type PlatformLike } from './runnerMechanics'
 import { CITY_THEMES, cityAtScore, type CityAtmosphere, type CityTheme } from './cities'
 
@@ -143,20 +142,70 @@ function makeGroundTexture(renderer: THREE.WebGLRenderer, kind: 'grass' | 'path'
   return texture
 }
 
-function makeSkyTexture(top: string, bottom: string): THREE.CanvasTexture {
+function makePanoramaTexture(city: CityTheme): THREE.CanvasTexture {
   const canvas = document.createElement('canvas')
-  canvas.width = 4
-  canvas.height = 256
+  canvas.width = 1024
+  canvas.height = 512
   const context = canvas.getContext('2d')
-  if (!context) throw new Error('Could not create the sky texture.')
-  const gradient = context.createLinearGradient(0, 0, 0, 256)
-  gradient.addColorStop(0, top)
-  gradient.addColorStop(0.55, bottom)
-  gradient.addColorStop(1, bottom)
-  context.fillStyle = gradient
-  context.fillRect(0, 0, 4, 256)
+  if (!context) throw new Error('Could not create the sky panorama.')
+
+  const sky = context.createLinearGradient(0, 0, 0, 300)
+  sky.addColorStop(0, city.skyTop)
+  sky.addColorStop(1, city.skyBottom)
+  context.fillStyle = sky
+  context.fillRect(0, 0, 1024, 512)
+
+  const drawCloud = (x: number, y: number, scale: number) => {
+    context.fillStyle = 'rgba(255, 255, 255, .78)'
+    context.fillRect(x, y, 12 * scale, 3 * scale)
+    context.fillRect(x + 4 * scale, y - 3 * scale, 6 * scale, 3 * scale)
+    context.fillRect(x - 4 * scale, y + 3 * scale, 18 * scale, 2 * scale)
+  }
+  const clouds = [[90, 212, 3], [280, 190, 2], [430, 236, 2.5], [640, 204, 3.2], [830, 226, 2.2], [960, 188, 1.8]]
+  for (const [x, y, scale] of clouds) drawCloud(x, y, scale)
+
+  context.fillStyle = city.hills[1]
+  context.fillRect(0, 258, 1024, 254)
+
+  const layers = [
+    { color: city.hills[0], base: 246, amp: 22, freq: 2, phase: 0.6 },
+    { color: city.hills[1], base: 258, amp: 15, freq: 3, phase: 2.1 },
+    { color: city.hills[2], base: 272, amp: 9, freq: 5, phase: 0.2 },
+  ]
+  for (const layer of layers) {
+    context.fillStyle = layer.color
+    context.beginPath()
+    context.moveTo(0, 512)
+    for (let x = 0; x <= 1024; x += 8) {
+      const angle = (x / 1024) * Math.PI * 2
+      const y = layer.base
+        - Math.sin(angle * layer.freq + layer.phase) * layer.amp
+        - Math.sin(angle * (layer.freq + 2) + layer.phase * 1.7) * layer.amp * 0.35
+      context.lineTo(x, y)
+    }
+    context.lineTo(1024, 512)
+    context.closePath()
+    context.fill()
+  }
+
+  // A dark tree line just above the grass hides the flat ground seam.
+  context.fillStyle = city.hills[2]
+  for (let x = 0; x < 1024; x += 16) {
+    const height = 8 + ((x * 7) % 12)
+    context.fillRect(x, 276 - height, 12, height)
+    context.beginPath()
+    context.arc(x + 6, 276 - height, 7, 0, Math.PI * 2)
+    context.fill()
+  }
+
+  context.globalAlpha = 0.18
+  context.fillStyle = city.fog
+  context.fillRect(0, 220, 1024, 56)
+  context.globalAlpha = 1
+
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
   return texture
 }
 
@@ -524,7 +573,7 @@ function makePowerupVisual(powerup: PowerupKind, texture: THREE.Texture | undefi
   return group
 }
 
-function makeTextureSet(sprite: CreatureSprite | null, creature: Creature): Record<SpriteDirection, THREE.Texture[]> {
+function makeTextureSet(sprite: CreatureSprite | null, fallback: HTMLImageElement | undefined): Record<SpriteDirection, THREE.Texture[]> {
   if (sprite) {
     const textures = {} as Record<SpriteDirection, THREE.Texture[]>
     for (const direction of SPRITE_DIRECTIONS) {
@@ -541,12 +590,17 @@ function makeTextureSet(sprite: CreatureSprite | null, creature: Creature): Reco
     return textures
   }
 
+  // Every playable form ships a SpriteCollab walk cycle. The only non-character
+  // fallback left is the Poké Ball icon, never the old hand-drawn creatures.
   const canvas = document.createElement('canvas')
   canvas.width = 192
   canvas.height = 192
   const context = canvas.getContext('2d')
-  if (!context) throw new Error('Could not create the character texture.')
-  drawPixelCreature(context, creature, 96, 96, 134)
+  if (!context) throw new Error('Could not create the sprite fallback.')
+  if (fallback) {
+    context.imageSmoothingEnabled = false
+    context.drawImage(fallback, 48, 48, 96, 96)
+  }
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.magFilter = THREE.NearestFilter
@@ -565,8 +619,8 @@ interface SpriteRig {
   dispose(): void
 }
 
-function makeSpriteRig(scene: THREE.Scene, sprite: CreatureSprite | null, creature: Creature, height: number): SpriteRig {
-  const textures = makeTextureSet(sprite, creature)
+function makeSpriteRig(scene: THREE.Scene, sprite: CreatureSprite | null, height: number, fallback?: HTMLImageElement): SpriteRig {
+  const textures = makeTextureSet(sprite, fallback)
   const aspect = sprite ? sprite.frameWidth / sprite.frameHeight : 1
   const anchor = sprite?.anchors.back ?? 0
   const material = new THREE.SpriteMaterial({
@@ -636,7 +690,7 @@ export async function createRunnerScene(
   const mount = canvas.parentElement
   const baseUrl = import.meta.env.BASE_URL ?? '/'
   const buildingNames = [...new Set(CITY_THEMES.flatMap((city) => city.buildings))]
-  const uiNames = ['stat-arrow-attack', 'stat-arrow-defense', 'stat-arrow-accuracy', 'stat-arrow-speed', 'ghost-gastly', 'ghost-haunter', 'veg-pine-large', 'veg-pine-small', 'veg-flowers', 'obstacle-tree', 'obstacle-rock', 'tile-grass', 'tile-path', 'ball-poke', 'ball-great', 'ball-ultra', 'ball-master', 'fx-steam']
+  const uiNames = ['stat-arrow-attack', 'stat-arrow-defense', 'stat-arrow-accuracy', 'stat-arrow-speed', 'ghost-gastly', 'ghost-haunter', 'veg-pine-large', 'veg-pine-small', 'veg-flowers', 'bush', 'obstacle-tree', 'obstacle-rock', 'tile-grass', 'tile-path', 'ball-poke', 'ball-great', 'ball-ultra', 'ball-master', 'fx-steam']
   const [playerSprite, buildingEntries, uiEntries] = await Promise.all([
     loadCreatureSprite(options.formId ?? creature.forms[0]?.id ?? creature.id),
     Promise.all(buildingNames.map(async (name) => {
@@ -669,12 +723,22 @@ export async function createRunnerScene(
   renderer.toneMappingExposure = 1.02
 
   const scene = new THREE.Scene()
-  const skyTextures = new Map(CITY_THEMES.map((city) => [city.id, makeSkyTexture(city.skyTop, city.skyBottom)]))
+  const panoramaTextures = new Map(CITY_THEMES.map((city) => [city.id, makePanoramaTexture(city)]))
   let currentCity = cityAtScore(0)
-  scene.background = skyTextures.get(currentCity.id) ?? null
+  const skyDomeMaterial = new THREE.MeshBasicMaterial({
+    map: panoramaTextures.get(currentCity.id) ?? null,
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+  })
+  const skyDome = new THREE.Mesh(new THREE.SphereGeometry(160, 48, 24), skyDomeMaterial)
+  skyDome.position.set(0, 0, -40)
+  skyDome.renderOrder = -1
+  scene.add(skyDome)
+  scene.background = new THREE.Color(currentCity.skyTop)
   scene.fog = new THREE.Fog(currentCity.fog, 80, 200)
 
-  const camera = new THREE.PerspectiveCamera(52, 2, 0.1, 220)
+  const camera = new THREE.PerspectiveCamera(52, 2, 0.1, 400)
   camera.position.set(0, 4.7, 9.9)
   camera.lookAt(0, 1.5, -10)
 
@@ -693,17 +757,7 @@ export async function createRunnerScene(
   const PATH_REPEAT_Y = 54
   groundTexture.repeat.set(GROUND_REPEAT_X, GROUND_REPEAT_Y)
   const groundMaterial = new THREE.MeshLambertMaterial({ map: groundTexture })
-  // The ground is a shallow valley: flat around the road, then banks rise
-  // towards the sides so the horizon reads as a semicircle instead of an
-  // empty wall of sky.
-  const groundGeometry = new THREE.PlaneGeometry(GROUND_WIDTH, GROUND_LENGTH, 80, 30)
-  const groundPositions = groundGeometry.attributes.position
-  for (let index = 0; index < groundPositions.count; index += 1) {
-    const x = groundPositions.getX(index)
-    const beyond = Math.max(0, Math.abs(x) - 18)
-    groundPositions.setZ(index, Math.pow(beyond / 142, 2) * 34)
-  }
-  groundGeometry.computeVertexNormals()
+  const groundGeometry = new THREE.PlaneGeometry(GROUND_WIDTH, GROUND_LENGTH, 1, 1)
   const ground = new THREE.Mesh(groundGeometry, groundMaterial)
   ground.rotation.x = -Math.PI / 2
   ground.position.set(0, 0, -80)
@@ -814,6 +868,8 @@ export async function createRunnerScene(
   distribute(uiTextures.get('veg-pine-large'), 16, 3.2, 4.2, 12, 17.5, 0.1)
   distribute(uiTextures.get('veg-pine-small'), 12, 1.8, 2.6, 9.5, 14, 0.3)
   distribute(uiTextures.get('veg-flowers'), 16, 0.5, 0.7, 3.9, 4.8, 0.7)
+  distribute(uiTextures.get('bush'), 26, 0.75, 1.05, 4.8, 8.5, 0.15)
+  distribute(uiTextures.get('bush'), 16, 1.0, 1.4, 12, 18, 0.6)
 
   const petalCount = 90
   const petalPositions = new Float32Array(petalCount * 3)
@@ -887,18 +943,19 @@ export async function createRunnerScene(
       }
     }
     currentCity = city
-    scene.background = skyTextures.get(city.id) ?? null
+    skyDomeMaterial.map = panoramaTextures.get(city.id) ?? null
+    skyDomeMaterial.needsUpdate = true
+    scene.background = new THREE.Color(city.skyTop)
     scene.fog?.color.set(city.fog)
     groundMaterial.color.set(city.grassTint)
     pathMaterial.color.set(city.pathTint).lerp(new THREE.Color(0xd6c4a0), 0.32)
-    horizonMaterials.forEach((material) => material.color.set(city.id === 'lavender' ? 0x9a92c8 : 0xffffff))
-    const night = city.id === 'lavender'
-    ;(sun.material as THREE.MeshBasicMaterial).color.setHex(night ? 0xcfc4ff : 0xfff6cf)
-    ;(sunGlow.material as THREE.MeshBasicMaterial).opacity = night ? 0.14 : 0.28
+    horizonMaterials.forEach((material) => material.color.set(0xffffff))
+    ;(sun.material as THREE.MeshBasicMaterial).color.setHex(0xfff6cf)
+    ;(sunGlow.material as THREE.MeshBasicMaterial).opacity = 0.28
     applyAmbient(city)
   }
 
-  const player = makeSpriteRig(scene, playerSprite, creature, PLAYER_HEIGHT)
+  const player = makeSpriteRig(scene, playerSprite, PLAYER_HEIGHT, uiTextures.get('ball-poke')?.image as HTMLImageElement | undefined)
   player.sprite.position.set(0, PLAYER_HEIGHT / 2, PLAYER_Z)
 
   const playerShadow = new THREE.Mesh(
@@ -1523,7 +1580,7 @@ export async function createRunnerScene(
       ambientMaterial.dispose()
       disposeTree(scene)
       for (const texture of buildingTextures.values()) texture.dispose()
-      for (const texture of skyTextures.values()) texture.dispose()
+      for (const texture of panoramaTextures.values()) texture.dispose()
       for (const texture of uiTextures.values()) texture.dispose()
       renderer.dispose()
     },

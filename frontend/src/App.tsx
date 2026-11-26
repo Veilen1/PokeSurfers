@@ -42,7 +42,6 @@ import { createGuestClient } from './guest/guestClient'
 import type { Credentials, Creature, LeaderboardEntry, PlayerProfile, RunResult } from '@trailkin/shared'
 import GameCanvas from './GameCanvas'
 import { drawSpriteFrame, loadCreatureSprite, spriteFrame, type CreatureSprite } from './creatureSprites'
-import { drawPixelCreature } from './pixelCreatures'
 import './App.css'
 
 type Profile = PlayerProfile
@@ -161,8 +160,6 @@ function CreaturePortrait({ creature, formId, large = false }: { creature: Creat
           canvas.height * 0.8,
           sprite.anchors.front,
         )
-      } else {
-        drawPixelCreature(context, creature, canvas.width / 2, canvas.height / 2, canvas.width * 0.88)
       }
     }
 
@@ -608,7 +605,7 @@ function GamePage({
     <div className="game-page">
       <section className="game-hero">
         <div className="game-hero-copy">
-          <Text className="eyebrow">POKESURFERS · SUNNY MEADOW</Text>
+          <Text className="eyebrow">POKÉSURFERS · HOENN</Text>
           <h1>Ride the <em>sunny trail.</em></h1>
           <p>Dash through the meadow with {creature.name}. Every run brings a new little spark.</p>
           <span className="hero-ready"><i /> YOUR POKÉMON IS READY</span>

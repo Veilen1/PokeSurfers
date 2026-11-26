@@ -249,7 +249,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
   const [doubleTime, setDoubleTime] = useState(0)
   const [sneakerTime, setSneakerTime] = useState(0)
   const [boardCharge, setBoardCharge] = useState(0)
-  const [cityBanner, setCityBanner] = useState<{ id: string; name: string } | null>(null)
+  const [cityBanner, setCityBanner] = useState<{ id: string; name: string; landmark: string } | null>(null)
   const [powerupNotice, setPowerupNotice] = useState<PowerupKind | null>(null)
   const [noticeSeq, setNoticeSeq] = useState(0)
   const [muted, setMuted] = useState(() => gameAudio.isMuted)
@@ -257,7 +257,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
   const [flash, setFlash] = useState<{ kind: FlashKind; id: number } | null>(null)
   const sceneRef = useRef<RunnerScene | null>(null)
   const flashTimer = useRef<number | undefined>(undefined)
-  const cityRef = useRef('pallet')
+  const cityRef = useRef('littleroot')
   const cityTimer = useRef<number | undefined>(undefined)
   const noticeTimer = useRef<number | undefined>(undefined)
   const [renderError, setRenderError] = useState<string | null>(null)
@@ -485,7 +485,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
             const nextCity = cityAtScore(game.score)
             if (nextCity.id !== cityRef.current) {
               cityRef.current = nextCity.id
-              setCityBanner({ id: nextCity.id, name: nextCity.name })
+              setCityBanner({ id: nextCity.id, name: nextCity.name, landmark: nextCity.landmark })
               gameAudio.play('city')
               triggerFlash('city', 700)
               if (cityTimer.current) window.clearTimeout(cityTimer.current)
@@ -613,8 +613,9 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
     setSneakerTime(0)
     setBoardCharge(0)
     setPowerupNotice(null)
-    cityRef.current = 'pallet'
-    setCityBanner({ id: 'pallet', name: 'Pallet Town' })
+    const openingCity = cityAtScore(0)
+    cityRef.current = openingCity.id
+    setCityBanner({ id: openingCity.id, name: openingCity.name, landmark: openingCity.landmark })
     if (cityTimer.current) window.clearTimeout(cityTimer.current)
     cityTimer.current = window.setTimeout(() => setCityBanner(null), 3_400)
     setStatus('running')
@@ -726,8 +727,9 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
         )}
         {status === 'running' && cityBanner && (
           <div key={cityBanner.id} className="city-banner">
-            <small><PixelText text="NOW ENTERING" /></small>
+            <small><PixelText text="ENTRANDO A" /></small>
             <PixelText text={cityBanner.name} scale={2} />
+            <span className="city-landmark"><PixelText text={cityBanner.landmark} /></span>
           </div>
         )}
         {status === 'running' && powerupNotice && (
