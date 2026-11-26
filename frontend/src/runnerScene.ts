@@ -3,7 +3,7 @@ import type { Creature } from '@trailkin/shared'
 import { SPRITE_FRAME_SECONDS, loadCreatureSprite, type CreatureSprite, type SpriteDirection } from './creatureSprites'
 import { drawPixelCreature } from './pixelCreatures'
 import { PLAYER_HEIGHT, PLAYER_Z, platformTopAt, type PlatformLike } from './runnerMechanics'
-import { CITY_THEMES, cityAtScore, type CityTheme } from './cities'
+import { CITY_THEMES, cityAtScore, type CityAtmosphere, type CityTheme } from './cities'
 
 export type RunnerObjectKind = 'coin' | 'barrier' | 'branch' | 'platform' | 'powerup'
 export type PowerupKind = 'magnet' | 'double' | 'sneakers' | 'hoverboard'
@@ -636,7 +636,7 @@ export async function createRunnerScene(
   const mount = canvas.parentElement
   const baseUrl = import.meta.env.BASE_URL ?? '/'
   const buildingNames = [...new Set(CITY_THEMES.flatMap((city) => city.buildings))]
-  const uiNames = ['stat-arrow-attack', 'stat-arrow-defense', 'stat-arrow-accuracy', 'stat-arrow-speed', 'ghost-gastly', 'ghost-haunter', 'veg-pine-large', 'veg-pine-small', 'veg-flowers', 'obstacle-tree', 'obstacle-rock', 'tile-grass', 'tile-path', 'ball-poke', 'ball-great', 'ball-ultra', 'ball-master']
+  const uiNames = ['stat-arrow-attack', 'stat-arrow-defense', 'stat-arrow-accuracy', 'stat-arrow-speed', 'ghost-gastly', 'ghost-haunter', 'veg-pine-large', 'veg-pine-small', 'veg-flowers', 'obstacle-tree', 'obstacle-rock', 'tile-grass', 'tile-path', 'ball-poke', 'ball-great', 'ball-ultra', 'ball-master', 'fx-steam']
   const [playerSprite, buildingEntries, uiEntries] = await Promise.all([
     loadCreatureSprite(options.formId ?? creature.forms[0]?.id ?? creature.id),
     Promise.all(buildingNames.map(async (name) => {
@@ -686,11 +686,25 @@ export async function createRunnerScene(
   const grassTile = uiTextures.get('tile-grass')?.image as HTMLImageElement | undefined
   const pathTile = uiTextures.get('tile-path')?.image as HTMLImageElement | undefined
   const groundTexture = makeGroundTexture(renderer, 'grass', grassTile)
-  const GROUND_REPEAT_Y = 15
+  const GROUND_LENGTH = 300
+  const GROUND_WIDTH = 320
+  const GROUND_REPEAT_X = 17
+  const GROUND_REPEAT_Y = 16
   const PATH_REPEAT_Y = 54
-  groundTexture.repeat.set(8, GROUND_REPEAT_Y)
+  groundTexture.repeat.set(GROUND_REPEAT_X, GROUND_REPEAT_Y)
   const groundMaterial = new THREE.MeshLambertMaterial({ map: groundTexture })
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(150, 280), groundMaterial)
+  // The ground is a shallow valley: flat around the road, then banks rise
+  // towards the sides so the horizon reads as a semicircle instead of an
+  // empty wall of sky.
+  const groundGeometry = new THREE.PlaneGeometry(GROUND_WIDTH, GROUND_LENGTH, 80, 30)
+  const groundPositions = groundGeometry.attributes.position
+  for (let index = 0; index < groundPositions.count; index += 1) {
+    const x = groundPositions.getX(index)
+    const beyond = Math.max(0, Math.abs(x) - 18)
+    groundPositions.setZ(index, Math.pow(beyond / 142, 2) * 34)
+  }
+  groundGeometry.computeVertexNormals()
+  const ground = new THREE.Mesh(groundGeometry, groundMaterial)
   ground.rotation.x = -Math.PI / 2
   ground.position.set(0, 0, -80)
   scene.add(ground)
@@ -698,7 +712,7 @@ export async function createRunnerScene(
   const pathTexture = makeGroundTexture(renderer, 'path', pathTile)
   pathTexture.repeat.set(1.5, PATH_REPEAT_Y)
   const pathMaterial = new THREE.MeshLambertMaterial({ map: pathTexture })
-  const path = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 280), pathMaterial)
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 300), pathMaterial)
   path.rotation.x = -Math.PI / 2
   path.position.set(0, 0.02, -80)
   scene.add(path)
@@ -858,10 +872,9 @@ export async function createRunnerScene(
             ? 4.4 + Math.random() * 1.0
             : 3.4 + Math.random() * 1.2
         const width = height * (image.width / image.height)
-        const tint = city.id === 'lavender' ? 0x9a92b8 : 0xffffff
         const plane = new THREE.Mesh(
           new THREE.PlaneGeometry(width, height),
-          new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.4, color: tint }),
+          new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.4, color: city.buildingTint }),
         )
         const x = smallProp
           ? side * (3.85 + Math.random() * 0.55)
@@ -882,9 +895,8 @@ export async function createRunnerScene(
     const night = city.id === 'lavender'
     ;(sun.material as THREE.MeshBasicMaterial).color.setHex(night ? 0xcfc4ff : 0xfff6cf)
     ;(sunGlow.material as THREE.MeshBasicMaterial).opacity = night ? 0.14 : 0.28
+    applyAmbient(city)
   }
-
-  buildCity(currentCity)
 
   const player = makeSpriteRig(scene, playerSprite, creature, PLAYER_HEIGHT)
   player.sprite.position.set(0, PLAYER_HEIGHT / 2, PLAYER_Z)
@@ -1006,6 +1018,102 @@ export async function createRunnerScene(
 
   const dustTexture = makeDustTexture()
   const sparkTexture = makeSparkTexture()
+
+  // Ambient weather that follows the player. It is one Points object, so the
+  // whole city mood costs a single draw call and only updates while running.
+  interface AmbientConfig {
+    texture: THREE.Texture
+    color: number
+    size: number
+    opacity: number
+    rise: number
+    drift: number
+    sway: number
+    sides: boolean
+  }
+  const steamTexture = uiTextures.get('fx-steam') ?? dustTexture
+  const ambientConfigs: Record<CityAtmosphere, AmbientConfig> = {
+    pollen: { texture: dustTexture, color: 0xffe9a8, size: 0.22, opacity: 0.55, rise: 0.25, drift: 0.5, sway: 0.7, sides: false },
+    leaves: { texture: dustTexture, color: 0x9cd47a, size: 0.42, opacity: 0.5, rise: -0.7, drift: 0.9, sway: 1.1, sides: false },
+    dust: { texture: dustTexture, color: 0xd8cbb5, size: 0.28, opacity: 0.45, rise: -0.15, drift: 1.2, sway: 0.5, sides: false },
+    sparkle: { texture: sparkTexture, color: 0xcfeaff, size: 0.32, opacity: 0.7, rise: 0.2, drift: 0.4, sway: 0.8, sides: false },
+    mist: { texture: dustTexture, color: 0xfff1e0, size: 4, opacity: 0.12, rise: 0.05, drift: 0.35, sway: 0.25, sides: true },
+    steam: { texture: steamTexture, color: 0xffe4d0, size: 3, opacity: 0.6, rise: 1.5, drift: 0.25, sway: 0.35, sides: true },
+    petals: { texture: dustTexture, color: 0xffc4e0, size: 0.38, opacity: 0.55, rise: -0.5, drift: 1.0, sway: 1.2, sides: false },
+    fog: { texture: dustTexture, color: 0xb9a9e8, size: 4.5, opacity: 0.1, rise: 0.03, drift: 0.5, sway: 0.2, sides: false },
+    haze: { texture: dustTexture, color: 0xffe3a0, size: 2.4, opacity: 0.1, rise: 0.05, drift: 0.4, sway: 0.2, sides: false },
+    snow: { texture: dustTexture, color: 0xeef2ff, size: 0.3, opacity: 0.75, rise: -0.9, drift: 0.5, sway: 0.9, sides: false },
+  }
+  const ambientCount = coarsePointer ? 30 : 56
+  const ambientPositions = new Float32Array(ambientCount * 3)
+  const ambientSpeeds = new Float32Array(ambientCount)
+  const ambientPhases = new Float32Array(ambientCount)
+  const ambientGeometry = new THREE.BufferGeometry()
+  ambientGeometry.setAttribute('position', new THREE.BufferAttribute(ambientPositions, 3))
+  const ambientMaterial = new THREE.PointsMaterial({
+    map: dustTexture,
+    transparent: true,
+    depthWrite: false,
+    size: 0.3,
+    opacity: 0.5,
+    sizeAttenuation: true,
+    color: 0xffffff,
+  })
+  const ambientPoints = new THREE.Points(ambientGeometry, ambientMaterial)
+  ambientPoints.frustumCulled = false
+  scene.add(ambientPoints)
+
+  let ambientConfig = ambientConfigs.pollen
+  let ambientClock = 0
+  let ambientLastElapsed = 0
+  let ambientLastDistance = 0
+
+  const seedAmbient = () => {
+    for (let index = 0; index < ambientCount; index += 1) {
+      const side = ambientConfig.sides
+        ? (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 10)
+        : (Math.random() - 0.5) * 58
+      ambientPositions[index * 3] = side
+      ambientPositions[index * 3 + 1] = ambientConfig.sides ? Math.random() * 4 : Math.random() * 11
+      ambientPositions[index * 3 + 2] = ambientConfig.sides
+        ? -22 + Math.random() * 30
+        : -45 + Math.random() * 60
+      ambientSpeeds[index] = 0.6 + Math.random() * 0.8
+      ambientPhases[index] = Math.random() * Math.PI * 2
+    }
+    ambientGeometry.attributes.position.needsUpdate = true
+  }
+
+  const applyAmbient = (city: CityTheme) => {
+    ambientConfig = ambientConfigs[city.atmosphere] ?? ambientConfigs.pollen
+    ambientMaterial.map = ambientConfig.texture
+    ambientMaterial.color.setHex(ambientConfig.color)
+    ambientMaterial.size = ambientConfig.size
+    ambientMaterial.opacity = ambientConfig.opacity
+    ambientMaterial.needsUpdate = true
+    seedAmbient()
+  }
+
+  const updateAmbient = (delta: number, moved: number) => {
+    if (delta <= 0) return
+    ambientClock += delta
+    for (let index = 0; index < ambientCount; index += 1) {
+      const at = index * 3
+      ambientPositions[at + 1] += ambientConfig.rise * ambientSpeeds[index] * delta
+      ambientPositions[at] += (ambientConfig.drift + Math.sin(ambientClock * 0.7 + ambientPhases[index]) * ambientConfig.sway) * delta
+      ambientPositions[at + 2] += moved * 0.05
+      if (ambientPositions[at + 1] < -1) ambientPositions[at + 1] = 14
+      else if (ambientPositions[at + 1] > 15) ambientPositions[at + 1] = 0.2
+      if (ambientPositions[at] > 31) ambientPositions[at] = -31
+      else if (ambientPositions[at] < -31) ambientPositions[at] = 31
+      if (ambientPositions[at + 2] > (ambientConfig.sides ? 10 : 16)) {
+        ambientPositions[at + 2] = ambientConfig.sides ? -22 : -45
+      }
+    }
+    ambientGeometry.attributes.position.needsUpdate = true
+  }
+
+  buildCity(currentCity)
 
   const makeParticlePool = (texture: THREE.Texture, count: number, blending: THREE.Blending) => ({
     cursor: 0,
@@ -1173,10 +1281,10 @@ export async function createRunnerScene(
         const nextCity = CITY_THEMES.find((city) => city.id === state.cityId)
         if (nextCity) {
           buildCity(nextCity)
-          const vegetationTint = nextCity.id === 'lavender' ? 0x9a92b8 : 0xffffff
+          const vegetationTint = nextCity.buildingTint
           for (const item of scenery) {
             if (item.object instanceof THREE.Sprite) {
-              ;(item.object.material as THREE.SpriteMaterial).color.setHex(vegetationTint)
+              ;(item.object.material as THREE.SpriteMaterial).color.set(vegetationTint)
             }
           }
         }
@@ -1224,8 +1332,8 @@ export async function createRunnerScene(
       }
 
       const scroll = state.distance
-      groundTexture.offset.y = (scroll / (280 / GROUND_REPEAT_Y)) % 1
-      pathTexture.offset.y = (scroll / (280 / PATH_REPEAT_Y)) % 1
+      groundTexture.offset.y = (scroll / (300 / GROUND_REPEAT_Y)) % 1
+      pathTexture.offset.y = (scroll / (300 / PATH_REPEAT_Y)) % 1
 
       const sceneryOffset = scroll % SCENERY_SPAN
       for (const item of scenery) {
@@ -1389,6 +1497,12 @@ export async function createRunnerScene(
         statOverlay.visible = false
       }
 
+      const ambientDelta = Math.min(0.05, Math.max(0, state.elapsed - ambientLastElapsed))
+      ambientLastElapsed = state.elapsed
+      const ambientMoved = Math.max(0, state.distance - ambientLastDistance)
+      ambientLastDistance = state.distance
+      if (!state.reducedMotion) updateAmbient(ambientDelta, ambientMoved)
+
       petals.material.opacity = state.reducedMotion ? 0.8 : 0.7 + Math.sin(state.elapsed * 1.4) * 0.12
       renderer.render(scene, camera)
     },
@@ -1404,6 +1518,9 @@ export async function createRunnerScene(
       observer.disconnect()
       player.dispose()
       disposeCity()
+      scene.remove(ambientPoints)
+      ambientGeometry.dispose()
+      ambientMaterial.dispose()
       disposeTree(scene)
       for (const texture of buildingTextures.values()) texture.dispose()
       for (const texture of skyTextures.values()) texture.dispose()

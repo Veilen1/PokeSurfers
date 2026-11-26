@@ -1,3 +1,15 @@
+export type CityAtmosphere =
+  | 'pollen'
+  | 'leaves'
+  | 'dust'
+  | 'sparkle'
+  | 'mist'
+  | 'steam'
+  | 'petals'
+  | 'fog'
+  | 'haze'
+  | 'snow'
+
 export interface CityTheme {
   id: string
   name: string
@@ -9,6 +21,10 @@ export interface CityTheme {
   fog: string
   grassTint: string
   pathTint: string
+  /** Multiplies the building sprites so each town has its own palette. */
+  buildingTint: string
+  /** Lightweight ambient effect that follows the player. */
+  atmosphere: CityAtmosphere
   hills: [string, string, string]
   accent: string
 }
@@ -24,6 +40,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#c9f0ff',
     grassTint: '#ffffff',
     pathTint: '#ffffff',
+    buildingTint: '#ffffff',
+    atmosphere: 'pollen',
     hills: ['#6cc25f', '#57a854', '#81cf6f'],
     accent: '#3f9b45',
   },
@@ -37,6 +55,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#cdf2ff',
     grassTint: '#f4fff1',
     pathTint: '#fffdf6',
+    buildingTint: '#f2fff0',
+    atmosphere: 'leaves',
     hills: ['#6bbd5d', '#559f51', '#7cc86b'],
     accent: '#3f9b45',
   },
@@ -44,12 +64,14 @@ export const CITY_THEMES: CityTheme[] = [
     id: 'pewter',
     name: 'Pewter City',
     threshold: 15_000,
-    buildings: ['house-gray', 'house-yellow', 'pokemon-center', 'pokemart', 'museum', 'pokemon-gym'],
+    buildings: ['house-yellow', 'house-blue', 'pokemon-center', 'pokemart', 'museum', 'pokemon-gym'],
     skyTop: '#8dbde6',
     skyBottom: '#f1f6ff',
     fog: '#d7e6f5',
     grassTint: '#f1f7e8',
     pathTint: '#f5efe2',
+    buildingTint: '#f0e5d2',
+    atmosphere: 'dust',
     hills: ['#7f9d8b', '#6d8b7c', '#93b09b'],
     accent: '#7a6a4f',
   },
@@ -63,6 +85,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#c4ecff',
     grassTint: '#f0fbff',
     pathTint: '#fbfaf2',
+    buildingTint: '#e9f5ff',
+    atmosphere: 'sparkle',
     hills: ['#5da8d6', '#4c92c2', '#79bde2'],
     accent: '#2f7fb5',
   },
@@ -76,6 +100,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#ffdcb5',
     grassTint: '#fff7e6',
     pathTint: '#fff8ea',
+    buildingTint: '#ffe9d2',
+    atmosphere: 'mist',
     hills: ['#c99a63', '#b98a58', '#d9ab74'],
     accent: '#d4713a',
   },
@@ -89,6 +115,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#ffd9ec',
     grassTint: '#fdf5ff',
     pathTint: '#fff3e8',
+    buildingTint: '#fff1fa',
+    atmosphere: 'petals',
     hills: ['#c78bc2', '#b47cb2', '#d9a2d2'],
     accent: '#b64f9f',
   },
@@ -102,6 +130,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#ffe1c2',
     grassTint: '#efffe8',
     pathTint: '#fff6e5',
+    buildingTint: '#f3ffe9',
+    atmosphere: 'leaves',
     hills: ['#6fbf5f', '#8bcf63', '#5aa84f'],
     accent: '#c95f3f',
   },
@@ -109,12 +139,14 @@ export const CITY_THEMES: CityTheme[] = [
     id: 'saffron',
     name: 'Saffron City',
     threshold: 105_000,
-    buildings: ['celadon-mansion', 'celadon-store', 'house-gray', 'house-blue', 'pokemon-center', 'fan-club'],
+    buildings: ['celadon-mansion', 'celadon-store', 'house-purple', 'house-blue', 'pokemon-center', 'fan-club'],
     skyTop: '#ffd27a',
     skyBottom: '#fff8e6',
     fog: '#ffe9bd',
     grassTint: '#f8fbe9',
     pathTint: '#fff9e9',
+    buildingTint: '#fff6dc',
+    atmosphere: 'haze',
     hills: ['#b0a06a', '#998a58', '#c6b67c'],
     accent: '#b07a26',
   },
@@ -122,12 +154,14 @@ export const CITY_THEMES: CityTheme[] = [
     id: 'lavender',
     name: 'Lavender Town',
     threshold: 132_000,
-    buildings: ['pokemon-tower', 'house-purple', 'house-gray', 'pokemon-center', 'sign'],
+    buildings: ['pokemon-tower', 'house-purple', 'house-blue', 'pokemon-center', 'sign'],
     skyTop: '#241d3d',
     skyBottom: '#4a3f66',
     fog: '#3a3155',
     grassTint: '#a79ec2',
     pathTint: '#b3a9c7',
+    buildingTint: '#b9b0d6',
+    atmosphere: 'fog',
     hills: ['#5b5278', '#4a4266', '#6d638c'],
     accent: '#6b5aa8',
   },
@@ -141,6 +175,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#ffd0b5',
     grassTint: '#fff2e6',
     pathTint: '#fbeadb',
+    buildingTint: '#ffe2d2',
+    atmosphere: 'steam',
     hills: ['#b5715c', '#9f5f4c', '#c98a70'],
     accent: '#c4502f',
   },
@@ -154,6 +190,8 @@ export const CITY_THEMES: CityTheme[] = [
     fog: '#c9d0ff',
     grassTint: '#f0f2ff',
     pathTint: '#f7f5ff',
+    buildingTint: '#e6e9ff',
+    atmosphere: 'snow',
     hills: ['#7f86c2', '#6c73ad', '#969dd4'],
     accent: '#4b55a8',
   },
