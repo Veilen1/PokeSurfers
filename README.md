@@ -61,6 +61,22 @@ npm run build
 
 Set `VITE_API_BASE_URL` only when an API exists. Static hosts that answer unknown paths with `index.html` are detected correctly (the health check requires JSON), so the game falls back to guest mode instead of hanging on the login screen. The header's **Connect account** button re-runs the check and switches to the normal login flow when a server appears; guest progress stays in the browser and is not transferred to the account. Clearing site data resets guest progress, and guest scores are not part of the global rankings.
 
+### Vercel
+
+The repository ships a `vercel.json`, so the project builds from the repository root:
+
+1. Import the repository at [vercel.com/new](https://vercel.com/new).
+2. Keep **Root Directory** at the repository root. Do not pick `frontend`: the `shared` workspace and the root lockfile live outside it.
+3. Leave the framework preset as detected (Other or Vite). The install, build and output settings come from `vercel.json`:
+   - install: `npm ci`
+   - build: `npm run build --workspace=frontend`
+   - output: `frontend/dist`
+4. Deploy. No environment variables are needed for guest mode.
+
+`vercel.json` rewrites unknown paths to `index.html`, so `/market` or `/leaderboard` survive a reload, and caches `/assets` and `/game` separately. Vercel answers `/api/health` with the SPA page, so the game correctly boots as a guest. When an API is added later, set `VITE_API_BASE_URL` as a build-time variable in the Vercel project and add the Vercel domain to the API's `WEB_ORIGIN`.
+
+Use Node 22.12 or newer (Node 24 also works). With the CLI: `npx vercel --prod`.
+
 ## Controls
 
 - Use `←` / `→` or `A` / `D` to change lanes.

@@ -1,0 +1,7 @@
+# Everything the Vite build needs is committed, but the source art rips
+# (assets/) are 40+ MB and only feed the local extraction scripts.
+assets/
+.github/
+.azure/
+scripts/
+extract_right_and_jump_sprites.py
