@@ -87,7 +87,7 @@ export const CITY_THEMES: CityTheme[] = [
   {
     id: 'dewford',
     name: 'Pueblo Azuliza',
-    landmark: 'Gimnasio de Marcial',
+    landmark: 'Gimnasio de Marcial · Máximo',
     threshold: 27_000,
     buildings: ['pokemon-gym', 'pokemon-center', 'pokemart', 'house-blue', 'house-purple', 'sign'],
     skyTop: '#4fb7ff',
@@ -103,7 +103,7 @@ export const CITY_THEMES: CityTheme[] = [
   {
     id: 'slateport',
     name: 'Ciudad Portual',
-    landmark: 'Museo Oceánico',
+    landmark: 'Museo Oceánico · Archie',
     threshold: 42_000,
     buildings: ['celadon-store', 'museum', 'fan-club', 'pokemon-center', 'pokemart', 'house-red'],
     skyTop: '#ffb673',
@@ -167,7 +167,7 @@ export const CITY_THEMES: CityTheme[] = [
   {
     id: 'lilycove',
     name: 'Ciudad Calagua',
-    landmark: 'Centro Comercial',
+    landmark: 'Centro Comercial · Guarida Aqua',
     threshold: 132_000,
     buildings: ['celadon-store', 'fan-club', 'celadon-mansion', 'pokemon-center', 'pokemart', 'house-purple'],
     skyTop: '#ffc4e0',
@@ -183,7 +183,7 @@ export const CITY_THEMES: CityTheme[] = [
   {
     id: 'mossdeep',
     name: 'Ciudad Algaria',
-    landmark: 'Gimnasio de Vito y Leti · Centro Espacial',
+    landmark: 'Gimnasio de Vito y Leti · Máximo',
     threshold: 162_000,
     buildings: ['pokemon-gym', 'museum', 'celadon-store', 'pokemon-center', 'pokemart'],
     skyTop: '#8f9bff',
@@ -199,7 +199,7 @@ export const CITY_THEMES: CityTheme[] = [
   {
     id: 'sootopolis',
     name: 'Ciudad Arrecípolis',
-    landmark: 'Gimnasio de Galano',
+    landmark: 'Gimnasio de Galano · Plubio',
     threshold: 195_000,
     buildings: ['pokemon-gym', 'celadon-mansion', 'house-blue', 'pokemon-center', 'pokemart', 'museum'],
     skyTop: '#a9d8ff',
@@ -215,7 +215,7 @@ export const CITY_THEMES: CityTheme[] = [
   {
     id: 'evergrande',
     name: 'Ciudad Colosalia',
-    landmark: 'Liga Pokémon',
+    landmark: 'Liga Pokémon · Alto Mando',
     threshold: 235_000,
     buildings: ['museum', 'celadon-store', 'celadon-mansion', 'pokemon-center', 'sign'],
     skyTop: '#8f9bff',

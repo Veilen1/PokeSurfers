@@ -3,6 +3,7 @@ import type { Creature } from '@trailkin/shared'
 import { SPRITE_FRAME_SECONDS, loadCreatureSprite, type CreatureSprite, type SpriteDirection } from './creatureSprites'
 import { PLAYER_HEIGHT, PLAYER_Z, platformTopAt, type PlatformLike } from './runnerMechanics'
 import { CITY_THEMES, cityAtScore, type CityAtmosphere, type CityTheme } from './cities'
+import { CITY_PEOPLE, CITY_WATER } from './cityPeople'
 
 export type RunnerObjectKind = 'coin' | 'barrier' | 'branch' | 'platform' | 'powerup'
 export type PowerupKind = 'magnet' | 'double' | 'sneakers' | 'hoverboard'
@@ -226,6 +227,34 @@ function makeBuildingTexture(image: HTMLImageElement): THREE.Texture {
   texture.minFilter = THREE.NearestFilter
   texture.generateMipmaps = false
   texture.needsUpdate = true
+  return texture
+}
+
+function makeWaterTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 64
+  canvas.height = 64
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Could not create the water texture.')
+  const gradient = context.createLinearGradient(0, 0, 0, 64)
+  gradient.addColorStop(0, '#2f8fc4')
+  gradient.addColorStop(1, '#1b5f8f')
+  context.fillStyle = gradient
+  context.fillRect(0, 0, 64, 64)
+  context.fillStyle = 'rgba(190, 240, 255, .35)'
+  for (let y = 3; y < 64; y += 8) {
+    for (let x = (y % 16); x < 64; x += 16) {
+      context.fillRect(x, y, 7, 1)
+      context.fillRect(x + 4, y + 2, 5, 1)
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.magFilter = THREE.NearestFilter
+  texture.minFilter = THREE.NearestFilter
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(2, 20)
   return texture
 }
 
@@ -708,6 +737,19 @@ export async function createRunnerScene(
   const uiTextures = new Map<string, THREE.Texture>(
     uiEntries.map(([name, image]) => [name, makeBuildingTexture(image)]),
   )
+  const peopleKeys = [...new Set([
+    ...Object.values(CITY_PEOPLE).flat().map((person) => person.key),
+    'fisherman',
+  ])]
+  const peopleTextures = new Map<string, THREE.Texture>()
+  await Promise.all(peopleKeys.map(async (key) => {
+    try {
+      const image = await loadImageAsset(`${baseUrl}game/people/${key}.png`)
+      peopleTextures.set(key, makeBuildingTexture(image))
+    } catch {
+      // A missing decorative character should never stop the run.
+    }
+  }))
 
   const coarsePointer = window.matchMedia('(pointer: coarse)').matches
   const maxPixelRatio = coarsePointer ? 1.25 : 1.75
@@ -897,21 +939,70 @@ export async function createRunnerScene(
 
   const cityGroup = new THREE.Group()
   scene.add(cityGroup)
-  let cityScenery: { object: THREE.Mesh; baseZ: number; baseX: number; side: number }[] = []
+  let cityScenery: { object: THREE.Object3D; baseZ: number; baseX: number; side: number }[] = []
+  let cityWaterTexture: THREE.CanvasTexture | null = null
+  const cityWaterObjects: THREE.Object3D[] = []
+
+  const disposeCityObject = (object: THREE.Object3D) => {
+    object.traverse((child) => {
+      const mesh = child as THREE.Mesh
+      if (mesh.geometry) mesh.geometry.dispose()
+      const material = (child as THREE.Mesh).material
+      if (Array.isArray(material)) material.forEach((entry) => entry.dispose())
+      else material?.dispose()
+    })
+  }
 
   const disposeCity = () => {
     for (const item of cityScenery) {
       cityGroup.remove(item.object)
-      item.object.geometry.dispose()
-      const material = item.object.material
-      if (Array.isArray(material)) material.forEach((entry) => entry.dispose())
-      else material.dispose()
+      disposeCityObject(item.object)
     }
     cityScenery = []
+    for (const object of cityWaterObjects) {
+      cityGroup.remove(object)
+      disposeCityObject(object)
+    }
+    cityWaterObjects.length = 0
+    cityWaterTexture?.dispose()
+    cityWaterTexture = null
   }
 
   const buildCity = (city: CityTheme) => {
     disposeCity()
+    const addDock = (side: number, baseZ: number) => {
+      const group = new THREE.Group()
+      const dock = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.18, 3.2), new THREE.MeshLambertMaterial({ color: 0x8a5a33 }))
+      dock.position.y = 0.1
+      group.add(dock)
+      const postGeometry = new THREE.CylinderGeometry(0.09, 0.09, 1.1, 6)
+      for (const px of [-1.0, 1.0]) {
+        const post = new THREE.Mesh(postGeometry, new THREE.MeshLambertMaterial({ color: 0x6b4426 }))
+        post.position.set(px, 0.55, 1.15)
+        group.add(post)
+      }
+      const fisher = peopleTextures.get('fisherman')
+      if (fisher) {
+        const fisherImage = fisher.image as HTMLImageElement
+        const fisherHeight = 1.25
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: fisher, transparent: true, alphaTest: 0.08 }))
+        sprite.scale.set(fisherHeight * (fisherImage.width / fisherImage.height), fisherHeight, 1)
+        sprite.position.set(0, 0.19 + fisherHeight / 2, 0.2)
+        group.add(sprite)
+      }
+      const outward = side * 2.0
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0.1, 1.1, 0.25),
+        new THREE.Vector3(outward, 0.04, 2.3),
+      ])
+      group.add(new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: 0xf4f4f4, transparent: true, opacity: 0.75 })))
+      const bobber = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff4d3d }))
+      bobber.position.set(outward, 0.06, 2.3)
+      group.add(bobber)
+      group.position.set(side * 20, 0, 0)
+      cityGroup.add(group)
+      cityScenery.push({ object: group, baseZ, baseX: side * 20, side })
+    }
     let index = 0
     for (const side of [-1, 1]) {
       for (let slot = 0; slot < 8; slot += 1) {
@@ -940,6 +1031,51 @@ export async function createRunnerScene(
         plane.position.z = baseZ
         cityGroup.add(plane)
         cityScenery.push({ object: plane, baseZ, baseX: x, side })
+
+        const residents = (CITY_PEOPLE[city.id] ?? []).filter((person) => person.building === name)
+        residents.forEach((person, residentIndex) => {
+          const personTexture = peopleTextures.get(person.key)
+          if (!personTexture) return
+          const personImage = personTexture.image as HTMLImageElement
+          const isPokemon = ['wingull', 'zigzagoon', 'kecleon', 'azumarill', 'poochyena'].includes(person.key)
+          const personHeight = isPokemon ? 0.8 : 1.35
+          const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: personTexture, transparent: true, alphaTest: 0.08 }))
+          sprite.scale.set(personHeight * (personImage.width / personImage.height), personHeight, 1)
+          sprite.position.set(0, personHeight / 2, 0)
+          const personX = x - side * 1.05
+          const personBaseZ = baseZ + 1.1 + residentIndex * 0.95
+          cityGroup.add(sprite)
+          cityScenery.push({ object: sprite, baseZ: personBaseZ, baseX: personX, side })
+        })
+      }
+    }
+    const water = CITY_WATER[city.id]
+    if (water) {
+      const texture = makeWaterTexture()
+      cityWaterTexture = texture
+      const sides = water.sides === 'both' ? [-1, 1] : [water.sides === 'left' ? -1 : 1]
+      for (const side of sides) {
+        const waterMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(26, 300),
+          new THREE.MeshBasicMaterial({ map: texture }),
+        )
+        waterMesh.rotation.x = -Math.PI / 2
+        waterMesh.position.set(side * 27, 0.02, -80)
+        cityGroup.add(waterMesh)
+        cityWaterObjects.push(waterMesh)
+        const shore = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.8, 300),
+          new THREE.MeshBasicMaterial({ color: 0xd9c48a }),
+        )
+        shore.rotation.x = -Math.PI / 2
+        shore.position.set(side * 13.8, 0.018, -80)
+        cityGroup.add(shore)
+        cityWaterObjects.push(shore)
+      }
+      if (water.fishing) {
+        for (const side of sides) {
+          for (const dockZ of [-10, -38, -66, -94]) addDock(side, dockZ)
+        }
       }
     }
     currentCity = city
@@ -1409,8 +1545,9 @@ export async function createRunnerScene(
         while (z > -1) z -= SCENERY_SPAN
         item.object.position.z = z
         item.object.position.x = item.baseX
-        const material = item.object.material as THREE.MeshBasicMaterial
-        material.opacity = 1
+        const material = (item.object as THREE.Mesh).material
+        if (Array.isArray(material)) material.forEach((entry) => { entry.opacity = 1 })
+        else if (material) material.opacity = 1
         item.object.visible = true
       }
 
@@ -1559,6 +1696,10 @@ export async function createRunnerScene(
       const ambientMoved = Math.max(0, state.distance - ambientLastDistance)
       ambientLastDistance = state.distance
       if (!state.reducedMotion) updateAmbient(ambientDelta, ambientMoved)
+      if (cityWaterTexture) {
+        cityWaterTexture.offset.y = (state.distance * 0.012) % 1
+        cityWaterTexture.offset.x = Math.sin(state.elapsed * 0.25) * 0.01
+      }
 
       petals.material.opacity = state.reducedMotion ? 0.8 : 0.7 + Math.sin(state.elapsed * 1.4) * 0.12
       renderer.render(scene, camera)
@@ -1582,6 +1723,7 @@ export async function createRunnerScene(
       for (const texture of buildingTextures.values()) texture.dispose()
       for (const texture of panoramaTextures.values()) texture.dispose()
       for (const texture of uiTextures.values()) texture.dispose()
+      for (const texture of peopleTextures.values()) texture.dispose()
       renderer.dispose()
     },
   }
