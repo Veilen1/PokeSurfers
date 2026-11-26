@@ -13,8 +13,8 @@ Source sheets from [The Spriters Resource](https://www.spriters-resource.com/gam
 | `pokemon-menu.png` | [Pokémon Menu](https://www.spriters-resource.com/game_boy_advance/pokemonemerald/asset/26964/) | **Previous** | Menu border (`panel-emerald`) for the pause/end cards |
 | `object-cuttable-tree.png`, `object-breakable-rock.png` | [pret/pokeemerald event-object sprites](https://github.com/pret/pokeemerald/tree/master/graphics/object_events/pics/misc) | **pret/pokeemerald contributors**; original game art by Game Freak/Nintendo | Intact Emerald Cut tree and Rock Smash obstacle frames |
 | `poke-balls.png` | [Poké Balls](https://www.spriters-resource.com/game_boy_advance/pokemonemerald/asset/20106/) | **wormintheworks** | Poké Ball, Great Ball, Ultra Ball and Master Ball pickups |
-| `item-icons.png` | [Item Icons](https://www.spriters-resource.com/game_boy_advance/pokemonemerald/asset/26917/) | **Previous** | Potion, Running Shoes, King's Rock and Pokémon Ball icons for the navigation, page headers, "Change Pokémon" and the favicon |
-| `steam-effects.png` | [Steam Effects](https://www.spriters-resource.com/game_boy_advance/pokemonemerald/asset/155605/) | **The Spriters Resource community** | Cinnabar Island steam puffs (`fx-steam`) |
+| `item-icons.png` | [Item Icons](https://www.spriters-resource.com/game_boy_advance/pokemonemerald/asset/26917/) | **Previous** | Potion, Running Shoes and Pokémon Ball icons for the navigation, page headers and the favicon |
+| `steam-effects.png` | [Steam Effects](https://www.spriters-resource.com/game_boy_advance/pokemonemerald/asset/155605/) | **The Spriters Resource community** | Pueblo Lavacalda hot-spring steam puffs (`fx-steam`) |
 | `font.gif` | [Font](https://www.spriters-resource.com/game_boy_advance/pokemonemerald/asset/8368/) | **Jackster** | HUD, city banners and menu headings (`font-emerald` atlas) |
 
 ## Generated files
@@ -24,8 +24,8 @@ Source sheets from [The Spriters Resource](https://www.spriters-resource.com/gam
 - `frontend/public/game/ui/obstacle-tree.png` and `obstacle-rock.png` — the intact first 16×16 event frame from the Emerald Cut Tree and Breakable Rock sheets. They alternate as the small jumpable obstacles. These are not crops of decorative trees or ground tiles; the old clipped `veg-bush.png` obstacle is removed by the generator.
 - `frontend/public/game/ui/stat-arrow-*.png`, `ghost-*.png`, `panel-emerald.png` — Emerald battle/UI art.
 - `frontend/public/game/ui/ball-*.png` — the four 12×12 ball crops.
-- `frontend/public/game/ui/icon-pokeball.png`, `icon-potion.png`, `icon-shoes.png`, `icon-kings-rock.png` — 24×24 item icons cut from the Item Icons sheet: navigation tabs, page headers, the "Change Pokémon" button and the favicon.
-- `frontend/public/game/ui/fx-steam.png` — the steam puff from the Steam Effects sheet, used by Cinnabar's ambient weather.
+- `frontend/public/game/ui/icon-pokeball.png`, `icon-potion.png`, `icon-shoes.png` — 24×24 item icons cut from the Item Icons sheet: navigation tabs, page headers and the favicon. `icon-kings-rock.png` is the 32×32 PokéSprite sprite described in `assets/Sprites-UI/README.md`.
+- `frontend/public/game/ui/fx-steam.png` — the steam puff from the Steam Effects sheet, used by Pueblo Lavacalda's hot-spring weather.
 - `frontend/public/game/ui/font-emerald.png` + `frontend/src/pixelFontData.ts` — the bitmap font atlas and metrics.
 
 `interface.png` (Battle Frontier UI) is a reference sheet kept for future UI work; the runner does not use it yet.
