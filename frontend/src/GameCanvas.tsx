@@ -42,6 +42,9 @@ interface GameCanvasProps {
 type Status = 'ready' | 'running' | 'paused' | 'finished'
 type FlashKind = 'crash' | 'powerup' | 'city'
 
+const numberFormatter = new Intl.NumberFormat('en-US')
+const COARSE_POINTER = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
 const LANE_SPACING = 2.4
 const laneX = (lane: number) => (lane - 1) * LANE_SPACING
 
@@ -284,6 +287,8 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
     let frame = 0
     let lastFrame = 0
     let lastHudUpdate = 0
+    let pendingRender = true
+    const hudInterval = COARSE_POINTER ? 180 : 80
     let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let motionPreference: MediaQueryList | undefined
     let updateMotionPreference: ((event: MediaQueryListEvent) => void) | undefined
@@ -325,6 +330,11 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
     const render = (now: number) => {
       const activeScene = scene
       if (!activeScene) return
+      if (document.hidden) {
+        lastFrame = now
+        frame = requestAnimationFrame(render)
+        return
+      }
       const delta = lastFrame === 0 ? 0 : Math.min((now - lastFrame) / 1_000, 0.05)
       lastFrame = now
       const game = gameRef.current
@@ -463,7 +473,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
             spawnWave(game)
             game.spawnIn = Math.max(0.72, 1.8 - difficultyAt(game.distance) * 1.05) + Math.random() * 0.25
           }
-          if (now - lastHudUpdate >= 80) {
+          if (now - lastHudUpdate >= hudInterval) {
             setScore(Math.floor(game.score))
             setDistance(Math.floor(game.distance))
             setCoins(game.coins)
@@ -486,27 +496,33 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
         }
       }
 
-      activeScene.render({
-        lane: game.lane,
-        elapsed: game.elapsed,
-        distance: game.distance,
-        y: game.y,
-        velocityY: game.velocityY,
-        sliding: game.slideRemaining > 0,
-        grounded: game.grounded,
-        objects: game.objects,
-        powerups: {
-          magnet: game.magnetRemaining > 0,
-          double: game.doubleRemaining > 0,
-          sneakers: game.sneakersRemaining > 0,
-          hoverboard: game.hoverboardCharges > 0,
-        },
-        cityId: cityAtScore(game.score).id,
-        pickup: game.pickupRemaining > 0 && game.pickupKind
-          ? { kind: game.pickupKind, progress: 1 - game.pickupRemaining / 1 }
-          : null,
-        reducedMotion,
-      })
+      // The 3D scene only needs to repaint while the run moves or when a
+      // resize/visibility change requested a fresh frame. Idle, paused and
+      // finished states keep the last frame behind the overlay.
+      if (statusRef.current === 'running' || pendingRender) {
+        activeScene.render({
+          lane: game.lane,
+          elapsed: game.elapsed,
+          distance: game.distance,
+          y: game.y,
+          velocityY: game.velocityY,
+          sliding: game.slideRemaining > 0,
+          grounded: game.grounded,
+          objects: game.objects,
+          powerups: {
+            magnet: game.magnetRemaining > 0,
+            double: game.doubleRemaining > 0,
+            sneakers: game.sneakersRemaining > 0,
+            hoverboard: game.hoverboardCharges > 0,
+          },
+          cityId: cityAtScore(game.score).id,
+          pickup: game.pickupRemaining > 0 && game.pickupKind
+            ? { kind: game.pickupKind, progress: 1 - game.pickupRemaining / 1 }
+            : null,
+          reducedMotion,
+        })
+        pendingRender = false
+      }
       frame = requestAnimationFrame(render)
     }
 
@@ -529,13 +545,20 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
       reducedMotion = motionPreference.matches
       updateMotionPreference = (event) => { reducedMotion = event.matches }
       motionPreference.addEventListener('change', updateMotionPreference)
+      pendingRender = true
       frame = requestAnimationFrame(render)
     }).catch((error: unknown) => {
       if (!disposed) setRenderError(error instanceof Error ? error.message : String(error))
     })
 
+    const requestRender = () => { pendingRender = true }
+    window.addEventListener('resize', requestRender)
+    window.addEventListener('orientationchange', requestRender)
+
     return () => {
       disposed = true
+      window.removeEventListener('resize', requestRender)
+      window.removeEventListener('orientationchange', requestRender)
       cancelAnimationFrame(frame)
       if (motionPreference && updateMotionPreference) {
         motionPreference.removeEventListener('change', updateMotionPreference)
@@ -673,9 +696,9 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
         <div className="hud-score">
           <span className="hud-label"><PixelText text="SCORE" /></span>
           <div className="hud-score-line">
-            <strong><PixelText text={score.toLocaleString('en-US')} scale={2} /></strong>
+            <strong><PixelText text={numberFormatter.format(score)} scale={2} /></strong>
             <span key={displayMultiplier} className={`score-multiplier${doubleTime > 0 ? ' is-boosted' : ''}`}><PixelText text={`×${displayMultiplier}`} /></span>
-            <small className="hud-distance"><PixelText text={`${distance.toLocaleString('en-US')} M`} /></small>
+            <small className="hud-distance"><PixelText text={`${numberFormatter.format(distance)} M`} /></small>
           </div>
         </div>
         <div className="hud-creature"><span className="status-dot" /><PixelText text={formName} /></div>
@@ -691,7 +714,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
           onPointerUp={onPointerUp}
           onPointerCancel={() => { gameRef.current.pointer = null }}
         />
-        <div className="speed-lines" style={{ opacity: speedOpacity }} aria-hidden="true" />
+        {status === 'running' && speedOpacity > 0 && <div className="speed-lines" style={{ opacity: speedOpacity }} aria-hidden="true" />}
         {flash && <div key={flash.id} className={`screen-flash screen-flash-${flash.kind}`} aria-hidden="true" />}
         {status === 'running' && hasPowerup && (
           <div className="powerup-row" aria-live="polite">
@@ -715,14 +738,14 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
         )}
         {(status !== 'running' || renderError) && (
           <div className="game-overlay">
-            <div className="overlay-card">
+            <div className={`overlay-card overlay-${status}${renderError ? ' overlay-error' : ''}`}>
               <span className="eyebrow"><PixelText text={renderError ? '3D SCENE UNAVAILABLE' : status === 'finished' ? 'TRAIL COMPLETE' : status === 'paused' ? 'PAUSED' : 'READY WHEN YOU ARE'} /></span>
               <h2><PixelText text={renderError ? 'Could not start the run' : status === 'finished' ? 'What a trail!' : status === 'paused' ? 'Take a breath' : 'Chase the multiplier'} scale={2} /></h2>
               <p>
                 {renderError
                   ? `The 3D scene could not be initialized: ${renderError}`
                   : status === 'finished'
-                    ? `You scored ${score.toLocaleString('en-US')} points over ${distance.toLocaleString('en-US')} m with a ×${multiplier} multiplier and collected ${coins} coins.`
+                    ? `You scored ${numberFormatter.format(score)} points over ${numberFormatter.format(distance)} m with a ×${multiplier} multiplier and collected ${coins} coins.`
                     : status === 'paused'
                       ? 'Your run is paused. Jump back in when you are ready.'
                       : 'The trail speeds up and the score multiplier climbs. Ride trains, clear logs, slide under vines, and grab Poké Ball power-ups.'}
@@ -743,16 +766,16 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
         {status === 'running' && (
           <>
             <Button appearance="subtle" className="action-button" icon={<ArrowUpRegular />} onClick={() => triggerAction('jump')}>
-              Jump · Space
+              Jump <span className="key-hint">· Space</span>
             </Button>
             <Button appearance="subtle" className="action-button" icon={<ArrowDownRegular />} onClick={() => triggerAction('slide')}>
-              Slide · ↓
+              Slide <span className="key-hint">· ↓</span>
             </Button>
             <Button appearance="subtle" className="pause-button" icon={<PauseRegular />} onClick={() => {
               gameAudio.play('click')
               statusRef.current = 'paused'
               setStatus('paused')
-            }}>Pause · Esc</Button>
+            }}>Pause <span className="key-hint">· Esc</span></Button>
           </>
         )}
         <div className="sound-control">

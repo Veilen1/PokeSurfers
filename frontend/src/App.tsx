@@ -112,8 +112,10 @@ function useRoute(): [Route, (route: Route) => void] {
 }
 
 function formatNumber(value: number): string {
-  return new Intl.NumberFormat('en-US').format(value)
+  return numberFormatter.format(value)
 }
+
+const numberFormatter = new Intl.NumberFormat('en-US')
 
 function CreaturePortrait({ creature, formId, large = false }: { creature: Creature; formId?: string; large?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -137,6 +139,7 @@ function CreaturePortrait({ creature, formId, large = false }: { creature: Creat
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let frame = 0
     let startedAt = 0
+    let lastPaint = 0
 
     const paint = (elapsed: number) => {
       context.clearRect(0, 0, canvas.width, canvas.height)
@@ -161,12 +164,19 @@ function CreaturePortrait({ creature, formId, large = false }: { creature: Creat
 
     const animate = (now: number) => {
       if (startedAt === 0) startedAt = now
-      paint(motion.matches ? 0 : (now - startedAt) / 1_000)
+      // The walk cycle only changes 10 times per second; repainting it at 60 fps
+      // just burns battery on phones.
+      const due = motion.matches ? lastPaint === 0 : now - lastPaint >= 90
+      if (!document.hidden && due) {
+        paint(motion.matches ? 0 : (now - startedAt) / 1_000)
+        lastPaint = now
+      }
       if (!motion.matches) frame = requestAnimationFrame(animate)
     }
     const restart = () => {
       cancelAnimationFrame(frame)
       startedAt = 0
+      lastPaint = 0
       frame = requestAnimationFrame(animate)
     }
 
@@ -489,12 +499,12 @@ function App() {
               <Avatar name={profile.displayName} size={32} color="brand" />
               <span className="username-label">{profile.displayName}</span>
               {connection === 'guest' ? (
-                <Button appearance="subtle" className="account-link" disabled={connecting} onClick={() => void handleConnect()}>
+                <Button appearance="subtle" className="account-link account-connect" disabled={connecting} onClick={() => void handleConnect()}>
                   {connecting ? 'Looking for server…' : 'Connect account'}
                 </Button>
               ) : (
                 <>
-                  <Button appearance="subtle" className="account-link" onClick={() => goTo('/create-account')}>Create account</Button>
+                  <Button appearance="subtle" className="account-link account-create" onClick={() => goTo('/create-account')}>Create account</Button>
                   <Button appearance="subtle" icon={<SignOutRegular />} aria-label="Sign out" title="Sign out" onClick={() => void handleLogout()} />
                 </>
               )}
@@ -514,7 +524,7 @@ function App() {
               <InfoRegular />
               <div>
                 <Text weight="semibold">Guest mode</Text>
-                <Text className="muted-copy">No server detected. Coins, levels and unlocks are saved in this browser only.</Text>
+                <Text className="muted-copy">Progress and unlocks are saved in this browser.</Text>
               </div>
             </div>
           )}

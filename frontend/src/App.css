@@ -657,6 +657,205 @@
 .powerup-banner-hoverboard { background: #9beeff; }
 .powerup-ball-icon-lg { width: 20px; height: 20px; }
 @keyframes powerup-in { from { opacity: 0; transform: translate(-50%, -8px) scale(.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+
+/* ==========================================================================
+   Mobile tier
+   Kept after the Emerald skin rules above: several of those rules come later
+   in the file than the older media queries and would otherwise win on phones.
+   ========================================================================== */
+
+.app-shell, .boot-screen, .account-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+html { scroll-padding-top: calc(96px + env(safe-area-inset-top)); }
+
+@media (max-width: 768px) {
+  .app-header { padding-top: env(safe-area-inset-top); }
+  .header-toolbar { min-height: 62px; }
+  .primary-nav { top: calc(62px + env(safe-area-inset-top)); }
+  .header-toolbar, .primary-nav .fui-TabList, .page-main { width: calc(100% - 24px); }
+  .page-main { padding-top: 14px; }
+  .app-shell { padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+  .content-page { padding-bottom: 18px; }
+
+  /* The trail comes first: hero, stats and banners no longer push the canvas
+     below the fold on a phone. */
+  .game-page { display: flex; flex-direction: column; }
+  .game-page .runner-section { order: 1; }
+  .game-page .game-stats { order: 2; margin: 12px 0 0; }
+  .game-page .game-hero { order: 3; margin: 12px 0 0; }
+
+  .game-hero { min-height: 132px; padding: 16px 18px; border-radius: 16px 24px 16px 16px; }
+  .game-hero h1 { font-size: 30px; }
+  .hero-companion { width: 150px; min-height: 110px; }
+  .hero-companion .creature-portrait { width: 96px; height: 96px; }
+
+  .game-layout { grid-template-columns: 1fr; }
+  .runner-aside { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .companion-card { grid-row: auto; }
+  .game-controls { flex-wrap: wrap; }
+  .page-intro h1 { font-size: 28px; }
+
+  .account-create { display: none !important; }
+  .account-connect { display: inline-flex; }
+}
+
+@media (max-width: 560px) {
+  .header-toolbar { min-height: 52px; }
+  .primary-nav { top: calc(52px + env(safe-area-inset-top)); }
+  .header-toolbar, .primary-nav .fui-TabList, .page-main { width: calc(100% - 20px); }
+
+  .wordmark { gap: 6px; }
+  .wordmark > span:last-child { font-size: 10px; }
+  .brand-glyph { width: 28px; height: 28px; border-radius: 10px 10px 10px 3px; font-size: 17px; }
+  .username-label, .header-account .fui-Avatar { display: none; }
+  .header-account { min-width: 0; gap: 4px; }
+  .account-connect { min-height: 36px; padding-inline: 6px; font-size: 11px; }
+  .coin-balance { max-width: 92px; overflow: hidden; white-space: nowrap; font-size: 10px; }
+  .coin-balance small { display: none; }
+  .header-account > .fui-Button { min-width: 44px; min-height: 44px; }
+
+  .primary-nav .fui-TabList { justify-content: space-between; gap: 0; }
+  .primary-nav .fui-Tab { flex: 1; justify-content: center; min-width: 0; min-height: 44px; padding: 0 2px; font-size: 10.5px; white-space: nowrap; }
+  .primary-nav .fui-Tab__icon { display: none; }
+
+  .page-main { padding-top: 10px; }
+  .guest-banner { margin-bottom: 8px; padding: 8px 10px; gap: 8px; }
+  .guest-banner > div { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 6px; }
+  .guest-banner .fui-Text { font-size: 11px; }
+  .guest-banner .muted-copy { font-size: 10px; }
+  .notice-card { margin-bottom: 8px; padding: 8px 10px; }
+
+  .game-hero { display: none; }
+  .game-page .game-stats { display: none; }
+  .runner-section .section-heading { display: none; }
+
+  .game-wrap { border-radius: 12px; }
+  .canvas-shell canvas { aspect-ratio: 3 / 2; }
+  .game-hud { height: 46px; padding: 0 8px; gap: 4px; }
+  .game-hud > div { gap: 4px; }
+  .hud-distance { display: none; }
+  .game-hud > .hud-creature { display: none; }
+  .game-hud strong { font-size: 12px; }
+
+  .game-overlay { padding: 6px; }
+  .overlay-card { max-width: 100%; padding: 8px 10px; border-width: 6px; }
+  .overlay-card h2 { margin: 2px 0 4px; font-size: 17px; }
+  .overlay-card p { margin: 0 0 8px; font-size: 9.5px; line-height: 1.45; }
+  .overlay-card.overlay-ready .eyebrow,
+  .overlay-card.overlay-ready p { display: none; }
+  .overlay-card.overlay-ready h2 { margin: 0 0 8px; transform: scale(.82); }
+  .overlay-card .overlay-primary { min-height: 44px; padding-inline: 16px; font-size: 13px; }
+
+  .city-banner { top: 6px; padding: 4px 10px; border-width: 2px; font-size: 10px; }
+  .city-banner small { font-size: 6px; letter-spacing: .16em; }
+  .powerup-banner { top: 38px; padding: 3px 8px; border-width: 2px; font-size: 9px; }
+  .powerup-ball-icon-lg { width: 14px; height: 14px; }
+  .powerup-row { top: 6px; left: 6px; gap: 4px; max-width: 62%; }
+  .powerup-pill { padding: 2px 5px; }
+  .powerup-pill .pixel-text { display: none; }
+  .powerup-ball-icon { width: 14px; height: 14px; }
+
+  .game-controls { min-height: 52px; justify-content: space-between; gap: 4px; padding: 4px 6px; }
+  .game-controls > span { display: none; }
+  .game-controls .sound-control { position: static; gap: 2px; }
+  .game-controls .sound-button { min-width: 36px; min-height: 44px; }
+  .volume-slider { width: 52px; }
+  .volume-value { display: none; }
+  .game-controls .action-button { min-height: 44px; padding-inline: 8px; font-size: 11px; }
+  .game-controls .pause-button { position: static; min-width: 44px; min-height: 44px; }
+  .game-controls .pause-button .fui-Button__content { font-size: 0; }
+  .game-controls .pause-button .fui-Button__icon { margin: 0; }
+  .game-controls .key-hint { display: none; }
+
+  .game-stats { gap: 5px; }
+  .stat-card { padding: 8px 6px; }
+  .stat-label { font-size: 7px; }
+  .stat-label svg { display: none; }
+  .stat-card strong { font-size: 14px; }
+  .stat-card small { font-size: 7.5px; }
+  .runner-aside { grid-template-columns: 1fr; margin-top: 10px; }
+  .controls-card, .companion-card { padding: 12px; }
+  .companion-card .creature-portrait-large { width: 86px; height: 86px; }
+  .companion-card .fui-Button { min-height: 44px; }
+  .companion-name { font-size: 16px; }
+  .controls-card p, .controls-card .muted-copy { font-size: 9.5px; }
+
+  .page-intro { margin-bottom: 14px; }
+  .page-intro h1 { font-size: 26px; }
+  .page-intro p { font-size: 12px; }
+  .creature-grid, .market-grid { grid-template-columns: 1fr; gap: 10px; }
+  .creature-card-art, .market-art { min-height: 120px; }
+  .market-card .market-art { min-height: 132px; }
+  .creature-card-art .creature-portrait, .market-art .creature-portrait { width: 86px; height: 86px; }
+  .creature-card .fui-CardHeader, .market-card .fui-CardHeader { padding: 10px 12px 6px; }
+  .creature-card-body { padding: 0 12px 10px; }
+  .creature-card .fui-CardFooter { min-height: 40px; padding: 0 12px; }
+  .market-details { padding: 6px 12px 10px; }
+  .market-note { margin-bottom: 10px; padding: 10px; gap: 9px; }
+  .donation-note { margin: 0 0 10px; padding: 10px; gap: 9px; }
+  .donation-note .muted-copy { display: none; }
+  .donation-status { margin-left: 0; }
+  .leaderboard-card table { min-width: 0; width: 100%; }
+  .leaderboard-card th:nth-child(4), .leaderboard-card td:nth-child(4) { display: none; }
+  .leaderboard-card .fui-TableCell, .leaderboard-card .fui-TableHeaderCell { padding: 8px 6px; font-size: 11px; }
+  .rankings-page .section-heading { margin-bottom: 8px; }
+  .section-hint { display: none; }
+
+  .account-layout { width: calc(100% - 20px); display: flex; flex-direction: column; gap: 10px; padding: 10px 0 24px; }
+  .account-form-card { order: -1; min-height: 0; margin: 0; padding: 16px; }
+  .account-form-card > .fui-Button:first-child { margin-bottom: 14px; }
+  .account-art { min-height: 170px; padding: 16px; }
+  .account-art .account-scene,
+  .account-art .account-foot { display: none !important; }
+  .account-form .fui-Input { height: 44px; }
+  .account-form input { height: 42px; }
+  .account-form button[type="submit"] { min-height: 44px; }
+  .account-promise { margin-top: 12px; }
+  .account-promise h1 { font-size: 24px; }
+  .account-promise p { font-size: 10.5px; }
+  .account-form-heading h2 { font-size: 20px; }
+
+  .state-panel { padding: 10px; }
+  .last-run-card { padding: 10px; }
+}
+
+@media (max-width: 380px) {
+  .primary-nav .fui-Tab { font-size: 10px; }
+  .coin-balance { max-width: 74px; }
+  .overlay-card p { font-size: 9px; }
+  .overlay-card.overlay-ready h2 { display: none; }
+  .game-controls .action-button { padding-inline: 5px; font-size: 10px; }
+  .volume-slider { width: 44px; }
+}
+
+/* Landscape phones: put the sign-in form first instead of the tall poster. */
+@media (pointer: coarse) and (max-height: 520px) {
+  .account-layout { width: calc(100% - 24px); display: flex; flex-direction: column; gap: 10px; padding: 10px 0 20px; min-height: 0; }
+  .account-form-card { order: -1; min-height: 0; margin: 0; padding: 16px; }
+  .account-form-card > .fui-Button:first-child { margin-bottom: 12px; }
+  .account-art { min-height: 140px; padding: 14px; }
+  .account-art .account-scene,
+  .account-art .account-foot,
+  .account-promise p,
+  .account-form-heading p { display: none !important; }
+  .account-promise { margin-top: 8px; }
+  .account-promise h1 { font-size: 22px; }
+}
+
+/* Phones spend their GPU budget on the canvas: keep decorative CSS animation
+   off coarse pointers while leaving desktop untouched. */
+@media (pointer: coarse) {
+  .speed-lines { display: none !important; }
+  .game-hero::after,
+  .hero-companion::before,
+  .hero-companion::after,
+  .hero-companion .creature-portrait,
+  .coin-value { animation: none !important; }
+  .hero-companion .creature-portrait canvas { filter: none; }
+}
+
 .powerup-pill {
   border: 2px solid #3a3f57;
   border-radius: 3px;

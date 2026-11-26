@@ -77,6 +77,12 @@ The repository ships a `vercel.json`, so the project builds from the repository 
 
 Use Node 22.12 or newer (Node 24 also works). With the CLI: `npx vercel --prod`.
 
+## Mobile
+
+The layout is tuned for phones from 320 px up: the trail renders first, the hero and stat cards collapse away, the guest banner becomes a single strip, the start/pause card fits inside the canvas, and navigation, buttons and touch controls keep 44 px targets. The canvas switches to a 3:2 frame on phones so the road stays readable without cropping the start card.
+
+On coarse pointers the 3D scene uses a lower quality tier: pixel ratio capped at 1.25×, no MSAA, smaller particle pools, a debounced resize, and rendering paused whenever a run is not active. Decorative CSS animations and hover-only effects are skipped, and the menu portraits repaint at the walk-cycle rate instead of every frame. Desktop keeps the original quality.
+
 ## Controls
 
 - Use `←` / `→` or `A` / `D` to change lanes.

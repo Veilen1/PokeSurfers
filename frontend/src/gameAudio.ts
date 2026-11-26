@@ -40,6 +40,12 @@ const MUTE_STORAGE_KEY = 'pokesurfers.muted'
 const VOLUME_STORAGE_KEY = 'pokesurfers.volume'
 const DEFAULT_VOLUME = 0.6
 
+/**
+ * Sounds needed in the first seconds of a run. Loading the rest after the run
+ * starts keeps the start tap from decoding all 682 KB of WAVs on phones.
+ */
+const CRITICAL_SOUNDS: GameSound[] = ['select', 'jump', 'land', 'slide', 'crash', 'coin', 'click']
+
 class GameAudio {
   private context: AudioContext | null = null
   private buffers = new Map<GameSound, AudioBuffer>()
@@ -114,10 +120,13 @@ class GameAudio {
         }
       }
       await Promise.all(
-        (Object.keys(SOUND_FILES) as GameSound[]).map((name) =>
-          this.load(name).catch(() => undefined),
-        ),
+        CRITICAL_SOUNDS.map((name) => this.load(name).catch(() => undefined)),
       )
+      window.setTimeout(() => {
+        for (const name of Object.keys(SOUND_FILES) as GameSound[]) {
+          if (!CRITICAL_SOUNDS.includes(name)) void this.load(name).catch(() => undefined)
+        }
+      }, 900)
     })()
 
     return this.unlockPromise

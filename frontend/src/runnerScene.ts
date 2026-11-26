@@ -597,7 +597,6 @@ function makeSpriteRig(scene: THREE.Scene, sprite: CreatureSprite | null, creatu
       frameIndex = index
       appliedDirection = direction
       material.map = frames[index]
-      material.needsUpdate = true
     },
     dispose() {
       scene.remove(object)
@@ -656,12 +655,15 @@ export async function createRunnerScene(
     uiEntries.map(([name, image]) => [name, makeBuildingTexture(image)]),
   )
 
+  const coarsePointer = window.matchMedia('(pointer: coarse)').matches
+  const maxPixelRatio = coarsePointer ? 1.25 : 1.75
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
-    powerPreference: 'high-performance',
+    antialias: !coarsePointer,
+    powerPreference: coarsePointer ? 'default' : 'high-performance',
+    stencil: false,
   })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio))
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.02
@@ -1034,10 +1036,10 @@ export async function createRunnerScene(
     }),
   })
 
-  const dustPool = makeParticlePool(dustTexture, 44, THREE.NormalBlending)
-  const coinPool = makeParticlePool(sparkTexture, 36, THREE.AdditiveBlending)
-  const powerupPool = makeParticlePool(sparkTexture, 36, THREE.AdditiveBlending)
-  const crashPool = makeParticlePool(sparkTexture, 28, THREE.AdditiveBlending)
+  const dustPool = makeParticlePool(dustTexture, coarsePointer ? 20 : 44, THREE.NormalBlending)
+  const coinPool = makeParticlePool(sparkTexture, coarsePointer ? 16 : 36, THREE.AdditiveBlending)
+  const powerupPool = makeParticlePool(sparkTexture, coarsePointer ? 16 : 36, THREE.AdditiveBlending)
+  const crashPool = makeParticlePool(sparkTexture, coarsePointer ? 12 : 28, THREE.AdditiveBlending)
 
   const spawnParticles = (
     pool: ReturnType<typeof makeParticlePool>,
@@ -1137,9 +1139,18 @@ export async function createRunnerScene(
     }
   }
 
+  let lastWidth = 0
+  let lastHeight = 0
   const resize = () => {
     const width = Math.max(1, canvas.clientWidth || mount?.clientWidth || 1)
     const height = Math.max(1, canvas.clientHeight || width / 2)
+    // Mobile browsers fire ResizeObserver repeatedly while the URL bar
+    // collapses; ignore sub-pixel churn to avoid reallocating the buffer.
+    if (Math.abs(width - lastWidth) < 2 && Math.abs(height - lastHeight) < 2) return
+    lastWidth = width
+    lastHeight = height
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio)
+    if (Math.abs(renderer.getPixelRatio() - pixelRatio) > 0.01) renderer.setPixelRatio(pixelRatio)
     renderer.setSize(width, height, false)
     camera.aspect = width / height
     camera.updateProjectionMatrix()
