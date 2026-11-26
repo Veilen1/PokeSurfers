@@ -1011,7 +1011,18 @@ export async function createRunnerScene(
         const texture = buildingTextures.get(name)
         if (!texture) continue
         const image = texture.image as HTMLImageElement
-        const landmark = ['celadon-store', 'pokemon-tower', 'museum', 'celadon-mansion', 'game-corner', 'pokemon-gym'].includes(name)
+        const landmark = [
+          'celadon-store',
+          'pokemon-tower',
+          'museum',
+          'celadon-mansion',
+          'game-corner',
+          'pokemon-gym',
+          'contest-hall',
+          'devon-corp',
+          'space-center',
+          'department-store',
+        ].includes(name)
         const smallProp = name === 'sign' || name === 'mailbox'
         const height = smallProp
           ? 0.8 + Math.random() * 0.3

@@ -25,8 +25,8 @@ export const CITY_PEOPLE: Record<string, CityPerson[]> = {
   ],
   rustboro: [
     { key: 'roxanne', building: 'pokemon-gym', name: 'Petra' },
-    { key: 'devon_employee', building: 'celadon-store', name: 'Devon S.A.' },
-    { key: 'maxie', building: 'celadon-store', name: 'Maxie' },
+    { key: 'devon_employee', building: 'devon-corp', name: 'Devon S.A.' },
+    { key: 'maxie', building: 'devon-corp', name: 'Maxie' },
   ],
   dewford: [
     { key: 'brawly', building: 'pokemon-gym', name: 'Marcial' },
@@ -49,13 +49,13 @@ export const CITY_PEOPLE: Record<string, CityPerson[]> = {
     { key: 'kecleon', building: 'house-green-a', name: 'Kecleon' },
   ],
   lilycove: [
-    { key: 'archie', building: 'fan-club', name: 'Guarida Aqua' },
-    { key: 'wingull', building: 'celadon-store', name: 'Wingull' },
+    { key: 'archie', building: 'contest-hall', name: 'Archie' },
+    { key: 'wingull', building: 'department-store', name: 'Wingull' },
   ],
   mossdeep: [
     { key: 'tate', building: 'pokemon-gym', name: 'Vito' },
     { key: 'liza', building: 'pokemon-gym', name: 'Leti' },
-    { key: 'steven', building: 'museum', name: 'Máximo' },
+    { key: 'steven', building: 'space-center', name: 'Máximo' },
   ],
   sootopolis: [
     { key: 'juan', building: 'pokemon-gym', name: 'Galano' },
