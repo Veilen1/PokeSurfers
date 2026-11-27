@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BRANCH_CLEAR_HEIGHT,
   GRAVITY,
   JUMP_VELOCITY,
   MAX_MULTIPLIER,
@@ -20,6 +21,7 @@ import {
   slide,
   speedAt,
   stepPlayer,
+  stepPlayerFrame,
   type PlatformLike,
   type PlayerState,
 } from './runnerMechanics'
@@ -209,5 +211,45 @@ describe('runner physics', () => {
     expect(coinInReach(onPlatform, PLATFORM_HEIGHT + 1)).toBe(true)
     expect(coinInReach(createPlayerState(), PLATFORM_HEIGHT + 1)).toBe(false)
     expect(GRAVITY).toBeGreaterThan(0)
+  })
+
+  it('keeps the jump apex stable on slow frames', () => {
+    const slow = createPlayerState()
+    const fast = createPlayerState()
+    jump(slow)
+    jump(fast)
+    let slowApex = 0
+    let fastApex = 0
+    for (let frame = 0; frame < 40; frame += 1) {
+      stepPlayerFrame(slow, 0.05, [])
+      slowApex = Math.max(slowApex, slow.y)
+    }
+    for (let frame = 0; frame < 120; frame += 1) {
+      stepPlayerFrame(fast, 1 / 60, [])
+      fastApex = Math.max(fastApex, fast.y)
+    }
+
+    // A 20 fps frame must not turn a ground jump into a tower-clearing jump.
+    expect(slowApex).toBeLessThan(TALL_PLATFORM_HEIGHT - MOUNT_TOLERANCE)
+    expect(Math.abs(slowApex - fastApex)).toBeLessThan(0.02)
+  })
+
+  it('clears a vine arch from a platform jump but not from the ground', () => {
+    const ground = createPlayerState()
+    jump(ground)
+    runFrames(ground, 0.3)
+    expect(ground.y).toBeLessThan(BRANCH_CLEAR_HEIGHT)
+    expect(passesBranch(ground)).toBe(false)
+
+    const fromPlatform = createPlayerState()
+    fromPlatform.y = PLATFORM_HEIGHT
+    jump(fromPlatform)
+    runFrames(fromPlatform, 0.3)
+    expect(fromPlatform.y).toBeGreaterThan(BRANCH_CLEAR_HEIGHT)
+    expect(passesBranch(fromPlatform)).toBe(true)
+
+    const sliding = createPlayerState()
+    slide(sliding)
+    expect(passesBranch(sliding)).toBe(true)
   })
 })

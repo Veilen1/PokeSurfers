@@ -16,6 +16,10 @@ export const POINTS_PER_METER = 8
 export const MOUNT_TOLERANCE = 0.55
 /** Just high enough that a ground jump cannot mount it, but a jump from the low platform can. */
 export const TALL_PLATFORM_HEIGHT = 3.9
+/** Feet height that clears a vine arch when jumping from a platform or a boost. */
+export const BRANCH_CLEAR_HEIGHT = TALL_PLATFORM_HEIGHT - MOUNT_TOLERANCE
+/** Longest physics step; larger frames are split so jump height stays stable. */
+const MAX_PHYSICS_STEP = 1 / 60
 
 export interface PlayerState {
   lane: number
@@ -119,6 +123,26 @@ export function stepPlayer(state: PlayerState, delta: number, platforms: readonl
   return { wallHit: false, landed: false }
 }
 
+/** Advances the runner in fixed substeps so slow frames do not raise the jump
+ * apex: semi-implicit Euler overshoots badly with a single large delta. */
+export function stepPlayerFrame(
+  state: PlayerState,
+  delta: number,
+  platforms: readonly PlatformLike[],
+): StepResult {
+  const steps = Math.max(1, Math.ceil(delta / MAX_PHYSICS_STEP))
+  const stepDelta = delta / steps
+  let wallHit = false
+  let landed = false
+  for (let step = 0; step < steps; step += 1) {
+    const result = stepPlayer(state, stepDelta, platforms)
+    wallHit = wallHit || result.wallHit
+    landed = landed || result.landed
+    if (result.wallHit) break
+  }
+  return { wallHit, landed }
+}
+
 /** A lane change is blocked when the destination lane has a solid platform
  * whose roof is too high to mount; otherwise the runner would clip into its
  * side and stop against a wall that is already behind the camera. */
@@ -136,9 +160,9 @@ export function clearsBarrier(state: PlayerState): boolean {
   return state.y >= 0.95
 }
 
-/** Vines and arches can only be passed while sliding. */
+/** Vines and arches can be slid under, or jumped over from a platform/boost. */
 export function passesBranch(state: PlayerState): boolean {
-  return state.slideRemaining > 0
+  return state.slideRemaining > 0 || state.y >= BRANCH_CLEAR_HEIGHT
 }
 
 /** Coins sit a little above the surface the runner is on. */

@@ -25,7 +25,7 @@ import {
   platformTopAt,
   slide,
   speedAt,
-  stepPlayer,
+  stepPlayerFrame,
   type PlayerState,
 } from './runnerMechanics'
 import type { PowerupKind, RunnerObject, RunnerScene } from './runnerScene'
@@ -469,7 +469,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
           const platforms = game.objects.filter((object) => object.kind === 'platform')
           const wasGrounded = game.grounded
           const fallSpeed = game.velocityY
-          if (stepPlayer(game, delta, platforms).wallHit) {
+          if (stepPlayerFrame(game, delta, platforms).wallHit) {
             if (game.hoverboardCharges > 0 || game.invulnerableRemaining > 0) {
               if (game.hoverboardCharges > 0) {
                 consumeHoverboard(game)
