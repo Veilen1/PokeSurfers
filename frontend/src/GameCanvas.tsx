@@ -11,10 +11,8 @@ import {
 import type { Creature } from '@trailkin/shared'
 import {
   MOUNT_TOLERANCE,
-  PLATFORM_HEIGHT,
   PLAYER_Z,
   POINTS_PER_METER,
-  TALL_PLATFORM_HEIGHT,
   clearsBarrier,
   coinInReach,
   createPlayerState,
@@ -29,6 +27,7 @@ import {
   type PlayerState,
 } from './runnerMechanics'
 import type { PowerupKind, RunnerObject, RunnerScene } from './runnerScene'
+import { planWave } from './runnerWaves'
 import { cityAtScore } from './cities'
 import { PixelText } from './PixelText'
 import { gameAudio } from './gameAudio'
@@ -84,9 +83,6 @@ const POWERUP_BALL_ICONS: Record<PowerupKind, string> = {
   hoverboard: 'ball-master',
 }
 
-const pick = <T,>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)]
-const difficultyAt = (distance: number) => Math.min(distance / 1_500, 1)
-
 const initialGame = (): GameState => ({
   ...createPlayerState(1),
   elapsed: 0,
@@ -122,18 +118,6 @@ function addObject(
   objectIdCounter += 1
 }
 
-function addCoinLine(game: GameState, lane: number, startZ: number, count: number, spacing: number, y: number): void {
-  for (let index = 0; index < count; index += 1) {
-    addObject(game, { lane, z: startZ + index * spacing, kind: 'coin', length: 0, height: 0, y, ramp: false })
-  }
-}
-
-function addPowerup(game: GameState, lane: number, z: number, y = 1.25): void {
-  const roll = Math.random()
-  const powerup: PowerupKind = roll < 0.3 ? 'magnet' : roll < 0.6 ? 'double' : roll < 0.85 ? 'sneakers' : 'hoverboard'
-  addObject(game, { lane, z, kind: 'powerup', length: 0, height: 0, y, ramp: false, powerup })
-}
-
 function applyPowerup(game: GameState, powerup: PowerupKind): void {
   if (powerup === 'magnet') game.magnetRemaining = 8
   else if (powerup === 'double') game.doubleRemaining = 10
@@ -145,7 +129,7 @@ function applyPowerup(game: GameState, powerup: PowerupKind): void {
 function laneBusy(game: GameState, lane: number): boolean {
   return game.objects.some((object) => object.kind === 'platform'
     && object.lane === lane
-    && object.z + object.length / 2 > -50
+    && object.z + object.length / 2 > -70
     && object.z - object.length / 2 < 12)
 }
 
@@ -160,99 +144,12 @@ function moveLane(game: GameState, direction: number): void {
 }
 
 function spawnWave(game: GameState): void {
-  const difficulty = difficultyAt(game.distance)
+  // Pattern selection, safe-lane guarantees and next-wave timing live in
+  // runnerWaves.ts so they can be tested without Three.js.
   const freeLanes = LANES.filter((lane) => !laneBusy(game, lane))
-  const openLanes = freeLanes.length > 0 ? freeLanes : [...LANES]
-  const roll = Math.random()
-
-  if (roll < 0.4) {
-    const lane = pick(openLanes)
-    // Only build a tall tower when another free lane can host its stepping
-    // stone; without the step the tower would be impossible to clear on foot.
-    // Prefer the adjacent free lane so the runner only needs one lane change.
-    const stepLane = openLanes
-      .filter((candidate) => candidate !== lane)
-      .sort((a, b) => Math.abs(a - lane) - Math.abs(b - lane))[0]
-    const tall = difficulty > 0.3 && stepLane !== undefined && Math.random() < 0.32
-    const height = tall ? TALL_PLATFORM_HEIGHT : PLATFORM_HEIGHT
-    const length = 13 + Math.random() * 9 + difficulty * 26
-    const farEdge = -56 - length
-    addObject(game, {
-      lane,
-      z: farEdge + length / 2,
-      kind: 'platform',
-      length,
-      height,
-      y: 0,
-      ramp: !tall && Math.random() < 0.5,
-    })
-    addCoinLine(game, lane, farEdge + 3, 3, 3.6, height + 1)
-    if (Math.random() < 0.22) addPowerup(game, lane, farEdge + length - 4, height + 1.2)
-
-    if (tall) {
-      // A lower platform in a neighbouring lane becomes the stepping stone
-      // used to reach the tall roof when Super Sneakers are not active. It has
-      // to start well before the tower so the runner can land on it, keep
-      // running and jump onto the tall roof instead of meeting its front wall
-      // at the same z as the step.
-      if (stepLane !== undefined) {
-        const stepNear = -36
-        const stepLength = Math.max(26, length * 0.8)
-        const stepFar = stepNear - stepLength
-        addObject(game, {
-          lane: stepLane,
-          z: stepFar + stepLength / 2,
-          kind: 'platform',
-          length: stepLength,
-          height: PLATFORM_HEIGHT,
-          y: 0,
-          ramp: false,
-        })
-        addCoinLine(game, stepLane, stepFar + 3, 2, 3.6, PLATFORM_HEIGHT + 1)
-      }
-      return
-    }
-
-    if (difficulty > 0.55 && openLanes.length >= 2 && Math.random() < 0.4) {
-      const secondLane = openLanes.find((candidate) => candidate !== lane)
-      if (secondLane !== undefined) {
-        const secondLength = 10 + Math.random() * 10 + difficulty * 16
-        const secondFar = -56 - secondLength
-        addObject(game, {
-          lane: secondLane,
-          z: secondFar + secondLength / 2,
-          kind: 'platform',
-          length: secondLength,
-          height: PLATFORM_HEIGHT,
-          y: 0,
-          ramp: Math.random() < 0.4,
-        })
-      }
-    }
-    return
-  }
-
-  const shuffled = [...openLanes].sort(() => Math.random() - 0.5)
-  const maxHazards = Math.max(0, shuffled.length - 1)
-  const hazardCount = Math.min(maxHazards, Math.random() < 0.35 + difficulty * 0.45 ? 2 : 1)
-
-  if (hazardCount > 0) {
-    const hazardLanes = shuffled.slice(0, hazardCount)
-    const kind = roll < 0.72 ? 'barrier' : 'branch'
-    for (const lane of hazardLanes) {
-      addObject(game, { lane, z: -54, kind, length: 0, height: 0, y: 0, ramp: false })
-    }
-    const safeLane = shuffled.find((lane) => !hazardLanes.includes(lane))
-    if (safeLane !== undefined) {
-      addCoinLine(game, safeLane, -58, 3, 3.1, 1)
-      if (Math.random() < 0.14) addPowerup(game, safeLane, -74)
-    }
-    return
-  }
-
-  const coinLane = pick(openLanes)
-  addCoinLine(game, coinLane, -58, 3, 3.1, 1)
-  if (Math.random() < 0.12) addPowerup(game, coinLane, -74)
+  const plan = planWave(game.distance, freeLanes, Math.random)
+  for (const object of plan.objects) addObject(game, object)
+  game.spawnIn = plan.delay
 }
 
 export default function GameCanvas({ creature, formId, formName, onRunEnd }: GameCanvasProps) {
@@ -489,10 +386,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
 
         if (statusRef.current === 'running') {
           game.spawnIn -= delta
-          if (game.spawnIn <= 0) {
-            spawnWave(game)
-            game.spawnIn = Math.max(0.72, 1.8 - difficultyAt(game.distance) * 1.05) + Math.random() * 0.25
-          }
+          if (game.spawnIn <= 0) spawnWave(game)
           if (now - lastHudUpdate >= hudInterval) {
             setScore(Math.floor(game.score))
             setDistance(Math.floor(game.distance))

@@ -8,8 +8,13 @@ export const GRAVITY = 34
 export const JUMP_VELOCITY = 14.8
 export const FAST_FALL_VELOCITY = 22
 export const SPEED_START = 11
-export const SPEED_CAP = 30
+export const SPEED_CAP = 38
 export const SPEED_PER_METER = 0.018
+/** The early curve tops out at 30 m/s around 1,056 m. */
+export const EARLY_SPEED_CAP = 30
+/** From here, the second, slower speed ramp begins. */
+export const LATE_SPEED_START_DISTANCE = 2_000
+export const LATE_SPEED_PER_METER = 0.004
 export const MAX_MULTIPLIER = 10
 export const METERS_PER_MULTIPLIER = 200
 export const POINTS_PER_METER = 8
@@ -171,7 +176,13 @@ export function coinInReach(state: PlayerState, coinY: number): boolean {
 }
 
 export function speedAt(distance: number): number {
-  return Math.min(SPEED_START + distance * SPEED_PER_METER, SPEED_CAP)
+  if (distance <= LATE_SPEED_START_DISTANCE) {
+    return Math.min(SPEED_START + distance * SPEED_PER_METER, EARLY_SPEED_CAP)
+  }
+  return Math.min(
+    EARLY_SPEED_CAP + (distance - LATE_SPEED_START_DISTANCE) * LATE_SPEED_PER_METER,
+    SPEED_CAP,
+  )
 }
 
 /** Subway-style score multiplier: it climbs every few hundred metres. */
