@@ -13,6 +13,7 @@ import {
   coinInReach,
   createPlayerState,
   jump,
+  laneChangeBlocked,
   multiplierAt,
   passesBranch,
   platformTopAt,
@@ -167,6 +168,30 @@ describe('runner physics', () => {
     expect(landed).toBe(true)
     expect(falling.y).toBe(TALL_PLATFORM_HEIGHT)
     expect(falling.grounded).toBe(true)
+  })
+
+  it('blocks lane changes into a roof that is too high to mount', () => {
+    const tall: PlatformLike = { lane: 1, z: 0, length: 20, height: TALL_PLATFORM_HEIGHT }
+    const low: PlatformLike = { lane: 1, z: 0, length: 20, height: PLATFORM_HEIGHT }
+    const state = createPlayerState(0)
+
+    // Neither a tall tower nor a low platform can be entered from the ground.
+    expect(laneChangeBlocked(state, [tall], 1)).toBe(true)
+    expect(laneChangeBlocked(state, [low], 1)).toBe(true)
+
+    // From the low platform the low roof is a normal step, the tall one is not.
+    state.y = PLATFORM_HEIGHT
+    expect(laneChangeBlocked(state, [low], 1)).toBe(false)
+    expect(laneChangeBlocked(state, [tall], 1)).toBe(true)
+
+    // Within the ledge-grab tolerance the tall roof can be entered.
+    state.y = TALL_PLATFORM_HEIGHT - MOUNT_TOLERANCE
+    expect(laneChangeBlocked(state, [tall], 1)).toBe(false)
+    state.y = TALL_PLATFORM_HEIGHT - MOUNT_TOLERANCE - 0.01
+    expect(laneChangeBlocked(state, [tall], 1)).toBe(true)
+
+    // An empty lane is always available.
+    expect(laneChangeBlocked(state, [], 1)).toBe(false)
   })
 
   it('only clears logs while above them and coins at the right height', () => {

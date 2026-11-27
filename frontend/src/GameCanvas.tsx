@@ -19,6 +19,7 @@ import {
   coinInReach,
   createPlayerState,
   jump,
+  laneChangeBlocked,
   multiplierAt,
   passesBranch,
   platformTopAt,
@@ -146,6 +147,16 @@ function laneBusy(game: GameState, lane: number): boolean {
     && object.lane === lane
     && object.z + object.length / 2 > -50
     && object.z - object.length / 2 < 12)
+}
+
+/** Moves one lane unless that lane currently holds a platform the runner
+ * cannot mount from its current height. */
+function moveLane(game: GameState, direction: number): void {
+  const target = Math.max(0, Math.min(2, game.lane + direction))
+  if (target === game.lane) return
+  const platforms = game.objects.filter((object) => object.kind === 'platform')
+  if (laneChangeBlocked(game, platforms, target)) return
+  game.lane = target
 }
 
 function spawnWave(game: GameState): void {
@@ -410,7 +421,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
             if (previousEdge <= PLAYER_Z && edge >= PLAYER_Z) {
               object.resolved = true
               if (game.y < object.height - 0.18) {
-                const canMount = !game.grounded && game.y >= object.height - MOUNT_TOLERANCE
+                const canMount = !game.grounded && game.y >= object.height - MOUNT_TOLERANCE - 1e-6
                 if (canMount) {
                   game.y = object.height
                   game.velocityY = 0
@@ -591,10 +602,10 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
       const game = gameRef.current
       if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
         event.preventDefault()
-        game.lane = Math.max(0, game.lane - 1)
+        moveLane(game, -1)
       } else if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
         event.preventDefault()
-        game.lane = Math.min(2, game.lane + 1)
+        moveLane(game, 1)
       } else if (event.key === 'ArrowUp' || event.key === 'w' || event.key === 'W' || event.code === 'Space') {
         event.preventDefault()
         if (jump(game, game.sneakersRemaining > 0 ? 1.35 : 1)) gameAudio.play('jump')
@@ -687,7 +698,7 @@ export default function GameCanvas({ creature, formId, formName, onRunEnd }: Gam
     if (Math.max(Math.abs(distanceX), Math.abs(distanceY)) <= 26) return
 
     if (Math.abs(distanceX) > Math.abs(distanceY)) {
-      gameRef.current.lane = Math.max(0, Math.min(2, gameRef.current.lane + (distanceX < 0 ? -1 : 1)))
+      moveLane(gameRef.current, distanceX < 0 ? -1 : 1)
     } else {
       triggerAction(distanceY < 0 ? 'jump' : 'slide')
     }

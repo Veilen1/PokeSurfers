@@ -79,7 +79,7 @@ export function stepPlayer(state: PlayerState, delta: number, platforms: readonl
 
   // Ledge grab: if the runner is within reach of a roof (jumping from the
   // ground or from another platform), pull them onto it instead of dropping.
-  if (gap > 0 && gap <= MOUNT_TOLERANCE) {
+  if (gap > 0 && gap <= MOUNT_TOLERANCE + 1e-6) {
     state.y = support
     state.velocityY = 0
     state.grounded = true
@@ -117,6 +117,18 @@ export function stepPlayer(state: PlayerState, delta: number, platforms: readonl
   state.velocityY = 0
   state.grounded = true
   return { wallHit: false, landed: false }
+}
+
+/** A lane change is blocked when the destination lane has a solid platform
+ * whose roof is too high to mount; otherwise the runner would clip into its
+ * side and stop against a wall that is already behind the camera. */
+export function laneChangeBlocked(
+  state: PlayerState,
+  platforms: readonly PlatformLike[],
+  targetLane: number,
+): boolean {
+  const support = platformTopAt(platforms, targetLane, PLAYER_Z)
+  return support > state.y + MOUNT_TOLERANCE + 1e-6
 }
 
 /** Logs are low enough to clear with a jump. */
