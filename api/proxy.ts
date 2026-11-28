@@ -6,6 +6,7 @@ const HOP_BY_HOP_HEADERS = new Set([
   "host",
   "connection",
   "content-length",
+  "content-encoding",
   "transfer-encoding",
   "keep-alive",
   "proxy-authenticate",
@@ -14,6 +15,13 @@ const HOP_BY_HOP_HEADERS = new Set([
   "trailer",
   "upgrade",
 ])
+
+/**
+ * El cliente pide compresión, pero el proxy reenvía el cuerpo tal cual: si el
+ * upstream responde en brotli, el body llega vacío al navegador. Pedimos
+ * identidad y dejamos que Vercel comprima la respuesta final.
+ */
+const SKIP_REQUEST_HEADERS = new Set(["accept-encoding"])
 
 function buildTargetUrl(request: VercelRequest): URL | null {
   if (!BACKEND_URL) return null
@@ -36,9 +44,11 @@ function buildTargetUrl(request: VercelRequest): URL | null {
 function forwardHeaders(request: VercelRequest): Headers {
   const headers = new Headers()
   for (const [key, value] of Object.entries(request.headers)) {
-    if (!value || HOP_BY_HOP_HEADERS.has(key.toLowerCase())) continue
+    const lower = key.toLowerCase()
+    if (!value || HOP_BY_HOP_HEADERS.has(lower) || SKIP_REQUEST_HEADERS.has(lower)) continue
     headers.set(key, Array.isArray(value) ? value.join(",") : String(value))
   }
+  headers.set("accept-encoding", "identity")
   return headers
 }
 
