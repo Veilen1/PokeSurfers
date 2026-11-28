@@ -52,6 +52,10 @@ The app probes `GET /api/health` when it starts. If a PokeSurfers API answers wi
 
 Guest mode keeps coins, XP and levels, unlocked partners, the selected form and the last 50 runs under `pokesurfers.guest.v1`. It uses the same catalog and reward rules as the API (both import them from the `shared` workspace), so progression feels identical.
 
+> **Full-stack deploy:** ver [`docs/DEPLOY.md`](docs/DEPLOY.md). El frontend de Vercel
+> expone `/api` con `api/proxy.ts` y reenvía a `BACKEND_URL`; el backend corre en
+> Render (recomendado) o en un segundo proyecto Vercel.
+
 Deploying only the frontend is supported:
 
 ```sh
