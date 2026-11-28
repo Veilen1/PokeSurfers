@@ -112,3 +112,7 @@ Pasos:
   JSON con `status` y `services`.
 - **Login no persiste**: revisar que el navegador esté entrando por `/api` del
   frontend (no directo al backend) y que el proxy reenvíe `set-cookie`.
+- **Respuestas 200 con cuerpo vacío**: el proxy pide `accept-encoding: identity`
+  al backend. Si se reenvía el `accept-encoding` del navegador, el backend
+  responde en brotli y el cuerpo llega vacío (checklists, catálogo, openapi).
+  No quitar esa cabecera de `api/proxy.ts`.
